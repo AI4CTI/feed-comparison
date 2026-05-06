@@ -6,6 +6,7 @@ import typer
 
 from feed_comparison.feeds.registry import registry
 from feed_comparison.settings import (
+    FeedConfigurationError,
     MissingCredentialsError,
     MissingOptionalDependencyError,
     Settings,
@@ -13,6 +14,12 @@ from feed_comparison.settings import (
 from feed_comparison.utils.time import filter_off_last_days
 
 _log = logging.getLogger(__name__)
+
+_PER_FEED_ERRORS = (
+    MissingCredentialsError,
+    MissingOptionalDependencyError,
+    FeedConfigurationError,
+)
 
 
 def download(
@@ -34,14 +41,15 @@ def download(
 
     run_id = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
 
+    succeeded = 0
     for name in feeds:
         feed = registry.get(name)
         _log.info("Downloading %s (%.1f days)...", name, days)
         try:
             df = feed.fetch(days=days, settings=settings)
-        except (MissingCredentialsError, MissingOptionalDependencyError) as exc:
+        except _PER_FEED_ERRORS as exc:
             _log.error("%s: %s", name, exc)
-            raise typer.Exit(code=2) from None
+            continue
 
         if df is None or df.empty:
             _log.warning("%s: no data returned", name)
@@ -53,3 +61,8 @@ def download(
         path = out / f"dataframe_{name}_{days}_{run_id}.csv"
         df.to_csv(path, encoding="utf-8", errors="replace")
         _log.info("%s: %d rows written to %s", name, len(df), path)
+        succeeded += 1
+
+    if succeeded == 0 and feeds:
+        _log.error("All %d requested feeds failed; nothing written.", len(feeds))
+        raise typer.Exit(code=2)

@@ -6,6 +6,7 @@ import typer
 
 from feed_comparison.feeds.registry import registry
 from feed_comparison.settings import (
+    FeedConfigurationError,
     MissingCredentialsError,
     MissingOptionalDependencyError,
     Settings,
@@ -16,6 +17,12 @@ from feed_comparison.utils.time import filter_off_last_days, force_temporal_boun
 _log = logging.getLogger(__name__)
 
 _DEFAULT_METRICS = ("hostname", "domain", "normURLwScheme")
+
+_PER_FEED_ERRORS = (
+    MissingCredentialsError,
+    MissingOptionalDependencyError,
+    FeedConfigurationError,
+)
 
 
 def compare(
@@ -56,9 +63,9 @@ def compare(
         _log.info("Downloading %s (%.1f days)...", name, days)
         try:
             df = feed.fetch(days=days, settings=settings)
-        except (MissingCredentialsError, MissingOptionalDependencyError) as exc:
-            _log.error("%s: %s", name, exc)
-            raise typer.Exit(code=2) from None
+        except _PER_FEED_ERRORS as exc:
+            _log.error("%s: %s (skipping)", name, exc)
+            continue
         if df is None or df.empty:
             _log.warning("%s: no data returned, skipping", name)
             continue
@@ -68,7 +75,11 @@ def compare(
         df.to_csv(out / f"dataframe_{name}_{days}_{run_id}.csv", encoding="utf-8", errors="replace")
 
     if len(downloaded) < 2:
-        _log.error("Need at least two non-empty feeds to compare; got %d", len(downloaded))
+        _log.error(
+            "Need at least two non-empty feeds to compare; got %d (%s)",
+            len(downloaded),
+            ", ".join(downloaded) or "none",
+        )
         raise typer.Exit(code=1)
 
     if force_window:

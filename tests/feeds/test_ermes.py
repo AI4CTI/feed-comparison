@@ -5,6 +5,7 @@ import pytest
 
 from feed_comparison.feeds.ermes import Ermes, _iocs_to_rows, _parse_iso8601
 from feed_comparison.settings import (
+    FeedConfigurationError,
     MissingCredentialsError,
     MissingOptionalDependencyError,
     Settings,
@@ -103,3 +104,37 @@ def test_ermes_fetch_raises_missing_optional_when_libs_unimportable(monkeypatch)
     msg = str(exc.value)
     assert "taxii2-client" in msg
     assert "requests-oauth2client" in msg
+
+
+def test_ermes_fetch_translates_oauth_errors_to_feed_configuration_error(monkeypatch):
+    """Server-side rejection of credentials must come out as a typed
+    FeedConfigurationError mentioning the env vars to check, not as a raw
+    OAuth2 traceback."""
+    pytest.importorskip("requests_oauth2client")
+    from requests_oauth2client.exceptions import OAuth2Error
+
+    class _FakeOAuth2Error(OAuth2Error):
+        # Bypass the parent __init__ (which requires real Response / Client
+        # instances we'd have to fabricate just to satisfy attrs validation).
+        def __init__(self):
+            Exception.__init__(self, "invalid_client (simulated)")
+
+        def __str__(self):
+            return "invalid_client: The client does not exist on this server"
+
+    def explode(self, *_args, **_kwargs):
+        raise _FakeOAuth2Error()
+
+    monkeypatch.setattr("requests_oauth2client.OAuth2ClientCredentialsAuth.renew_token", explode)
+
+    settings = Settings(
+        ermes_api_server="https://api.example.com",
+        ermes_client_id="bad-id",
+        ermes_client_secret="bad-secret",
+    )
+    with pytest.raises(FeedConfigurationError) as exc:
+        Ermes().fetch(days=1, settings=settings)
+    msg = str(exc.value)
+    assert "ERMES_API_SERVER" in msg
+    assert "ERMES_CLIENT_ID" in msg
+    assert "ERMES_CLIENT_SECRET" in msg

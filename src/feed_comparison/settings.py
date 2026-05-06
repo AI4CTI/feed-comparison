@@ -93,3 +93,9 @@ class MissingOptionalDependencyError(RuntimeError):
             f"Install it with: uv tool install --force 'feed-comparison[{extra}]' "
             f"(or: pip install 'feed-comparison[{extra}]')."
         )
+
+
+class FeedConfigurationError(RuntimeError):
+    """Raised when a feed is installed and credentials are present but the
+    remote service refuses them (typically wrong endpoint, wrong client id,
+    expired secret, or mismatched environment)."""

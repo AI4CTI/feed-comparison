@@ -5,7 +5,11 @@ from http import HTTPStatus
 import pandas as pd
 
 from feed_comparison.feeds.base import Feed
-from feed_comparison.settings import MissingOptionalDependencyError, Settings
+from feed_comparison.settings import (
+    FeedConfigurationError,
+    MissingOptionalDependencyError,
+    Settings,
+)
 from feed_comparison.utils.normalize import canonicalize_feed
 
 _log = logging.getLogger(__name__)
@@ -47,6 +51,7 @@ def _fetch_raw(days, api_server, client_id, client_secret):
     try:
         from requests import HTTPError
         from requests_oauth2client import OAuth2Client, OAuth2ClientCredentialsAuth
+        from requests_oauth2client.exceptions import OAuth2Error
         from taxii2client import ApiRoot
         from taxii2client.v21 import as_pages
     except ImportError as exc:
@@ -65,12 +70,12 @@ def _fetch_raw(days, api_server, client_id, client_secret):
     )
     auth = OAuth2ClientCredentialsAuth(oauth)
     api_root = ApiRoot(feed_url, auth=auth)
-    collection = api_root.collections[0]
 
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)
 
     rows = []
     try:
+        collection = api_root.collections[0]
         pages = as_pages(
             collection.get_objects,
             per_request=_PER_REQUEST,
@@ -79,6 +84,11 @@ def _fetch_raw(days, api_server, client_id, client_secret):
         for page in pages:
             metas = (obj.get("ermes_metadata", {}) for obj in page.get("objects", []))
             rows.extend(_iocs_to_rows(metas))
+    except OAuth2Error as exc:
+        raise FeedConfigurationError(
+            f"Ermes OAuth authentication against {token_endpoint} failed: {exc}. "
+            "Verify ERMES_API_SERVER, ERMES_CLIENT_ID and ERMES_CLIENT_SECRET."
+        ) from exc
     except HTTPError as exc:
         if exc.response is None or exc.response.status_code != HTTPStatus.NOT_FOUND:
             raise
