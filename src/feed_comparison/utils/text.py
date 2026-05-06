@@ -5,9 +5,19 @@ _IP_V4_RE = re.compile(r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$
 
 
 def get_hostname(url):
+    """Return the network location of an http(s) URL, or "" if it cannot be parsed.
+
+    Python 3.11+ raises ValueError on malformed inputs (e.g. unbalanced
+    `[` from a partial IPv6 literal). We treat those as "no hostname"
+    rather than crashing the whole feed pipeline; callers are expected
+    to drop entries with an empty hostname.
+    """
     if not url.startswith("http"):
         url = "http://" + url
-    return urlparse(url).netloc
+    try:
+        return urlparse(url).netloc
+    except ValueError:
+        return ""
 
 
 def is_ip_address(host):

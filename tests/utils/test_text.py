@@ -17,6 +17,19 @@ def test_get_hostname(url, expected):
 
 
 @pytest.mark.parametrize(
+    "url",
+    [
+        "http://[unbalanced.example.com/",  # unbalanced IPv6 bracket -> ValueError on 3.11+
+        "http://]nope.example.com/",
+    ],
+)
+def test_get_hostname_returns_empty_on_unparseable(url):
+    """Regression: urlparse on Python 3.11+ raises ValueError on malformed inputs.
+    We must degrade gracefully so the per-feed pipeline doesn't crash."""
+    assert get_hostname(url) == ""
+
+
+@pytest.mark.parametrize(
     ("host", "expected"),
     [
         ("192.168.1.1", True),

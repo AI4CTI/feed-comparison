@@ -26,9 +26,18 @@ def _strip_scheme(canonical):
 
 
 def _domain_of(url_no_scheme):
-    if is_ip_address(url_no_scheme):
-        return url_no_scheme
-    extracted = tldextract.extract(url_no_scheme)
+    # Strip path / query so an IP literal in the host is still recognised.
+    host = url_no_scheme.split("/", 1)[0]
+    if is_ip_address(host):
+        return host
+    try:
+        extracted = tldextract.extract(host)
+    except (ValueError, UnicodeError):
+        return ""
+    if extracted.ipv4:
+        return extracted.ipv4
+    if not extracted.domain or not extracted.suffix:
+        return ""
     return f"{extracted.domain}.{extracted.suffix}"
 
 
@@ -94,6 +103,19 @@ def canonicalize_feed(df, short_name):
     df = df.sort_values(by="discovered_date")
 
     df["hostname"] = df["normURLwScheme"].map(get_hostname)
+    # An empty hostname means urlparse refused the URL (e.g. unbalanced
+    # IPv6 brackets); such rows can't participate in overlap or merge
+    # analyses, so we drop them with a debug-level note.
+    pre = len(df)
+    df = df[df["hostname"] != ""]
+    if len(df) < pre:
+        _log.debug(
+            "canonicalize_feed: dropped %d entries with unparseable hostname",
+            pre - len(df),
+        )
+    if df.empty:
+        return df
+
     df.insert(2, "domain", [_domain_of(idx) for idx in df.index])
 
     reserved = {"domain", "hostname", "normURLwoScheme", "normURLwScheme"}
