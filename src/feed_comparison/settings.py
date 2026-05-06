@@ -22,6 +22,9 @@ class Settings:
     phishtank_username: str | None = None
     urlscan_url: str | None = None
     urlscan_token: str | None = None
+    ermes_api_server: str | None = None
+    ermes_client_id: str | None = None
+    ermes_client_secret: str | None = None
 
     # Generic
     output_dir: Path = Path("./output")
@@ -54,6 +57,9 @@ class Settings:
             phishtank_username=os.environ.get("PHISHTANK_USERNAME"),
             urlscan_url=os.environ.get("URLSCAN_URL"),
             urlscan_token=os.environ.get("URLSCAN_TOKEN"),
+            ermes_api_server=os.environ.get("ERMES_API_SERVER"),
+            ermes_client_id=os.environ.get("ERMES_CLIENT_ID"),
+            ermes_client_secret=os.environ.get("ERMES_CLIENT_SECRET"),
             output_dir=Path(output_dir),
         )
 

@@ -16,7 +16,7 @@ Threat-intelligence feeds for malicious URLs are usually consumed in isolation, 
 
 ## Features in v0.1.0
 
-- **Four feed integrations** out of the box: PhishStats (anonymous), PhishTank (free username), urlscan.io (API token) and MISP (self-hosted instance, optional extra).
+- **Five feed integrations** out of the box: PhishStats (anonymous), PhishTank (free username), urlscan.io (API token), MISP (self-hosted instance, optional extra) and the Ermes CTI Feed (STIX/TAXII over OAuth 2.0, optional extra).
 - **URL canonicalisation** following the Google Safe Browsing approach (host normalisation, IDNA, percent-encoding, query-string sorting...). 92% line coverage in tests against ~60 reference cases.
 - **Overlap analysis** with SuperVenn plots over hostname, registered domain or full normalised URL.
 - **Time-delta analysis**: CDF of per-URL discovery deltas relative to a chosen benchmark feed.
@@ -45,10 +45,17 @@ uv run pre-commit install
 uv run pytest
 ```
 
-The MISP integration is opt-in (it pulls in the heavy `pymisp` dependency):
+The MISP and Ermes integrations are opt-in extras (they pull in additional dependencies):
 
 ```bash
+# MISP self-hosted (heavy `pymisp` dependency)
 uv tool install '.[misp]'
+
+# Ermes CTI Feed (STIX/TAXII + OAuth 2.0 client credentials)
+uv tool install '.[ermes]'
+
+# Both at once
+uv tool install '.[misp,ermes]'
 ```
 
 ## Quickstart
@@ -71,32 +78,36 @@ feed-comparison plot supervenn ./output/dataframe_*.csv --metric domain
 
 Per-feed credentials are read from environment variables (and from a `.env` file in the current working directory if present). Only the variables for the feeds you actually use are required:
 
-| Env var               | Used by    | Notes                                       |
-| --------------------- | ---------- | ------------------------------------------- |
-| `MISP_URL`            | MISP       | Base URL of your self-hosted MISP instance  |
-| `MISP_KEY`            | MISP       | API key                                     |
-| `PHISHTANK_USERNAME`  | PhishTank  | Free username for the User-Agent string     |
-| `URLSCAN_URL`         | urlscan.io | Search API endpoint, e.g. `.../api/v1/search/` |
-| `URLSCAN_TOKEN`       | urlscan.io | API token                                   |
-| `FEED_COMPARISON_OUTPUT_DIR` | global | Default output directory               |
+| Env var                       | Used by    | Notes                                                |
+| ----------------------------- | ---------- | ---------------------------------------------------- |
+| `MISP_URL`                    | MISP       | Base URL of your self-hosted MISP instance           |
+| `MISP_KEY`                    | MISP       | API key                                              |
+| `PHISHTANK_USERNAME`          | PhishTank  | Free username for the User-Agent string              |
+| `URLSCAN_URL`                 | urlscan.io | Search API endpoint, e.g. `.../api/v1/search/`       |
+| `URLSCAN_TOKEN`               | urlscan.io | API token                                            |
+| `ERMES_API_SERVER`            | Ermes      | Base URL of the Ermes CTI Feed service               |
+| `ERMES_CLIENT_ID`             | Ermes      | OAuth 2.0 Client Credentials — client id             |
+| `ERMES_CLIENT_SECRET`         | Ermes      | OAuth 2.0 Client Credentials — client secret         |
+| `FEED_COMPARISON_OUTPUT_DIR`  | global     | Default output directory                             |
 
 A reference template lives in [`.env.example`](.env.example).
 
 ## Available feeds
 
-| Name        | Provider                            | Credentials                       |
-| ----------- | ----------------------------------- | --------------------------------- |
-| `phishstats`| <https://phishstats.info/>          | none                              |
-| `phishtank` | <https://phishtank.org/>            | free username                     |
-| `urlscan`   | <https://urlscan.io/>               | endpoint URL + API token          |
-| `misp`      | <https://www.misp-project.org/>     | self-hosted instance URL + API key (extra `[misp]`) |
+| Name        | Provider                            | Credentials                                                          |
+| ----------- | ----------------------------------- | -------------------------------------------------------------------- |
+| `phishstats`| <https://phishstats.info/>          | none                                                                 |
+| `phishtank` | <https://phishtank.org/>            | free username                                                        |
+| `urlscan`   | <https://urlscan.io/>               | endpoint URL + API token                                             |
+| `misp`      | <https://www.misp-project.org/>     | self-hosted instance URL + API key (extra `[misp]`)                  |
+| `ermes`     | <https://www.ermes.company/>        | OAuth 2.0 endpoint + client id + client secret (extra `[ermes]`)     |
 
 `feed-comparison list-feeds --json` prints the same catalogue in machine-readable form for scripting.
 
 ## Limitations
 
 - The original internal version supported additional commercial feeds (BitDefender, BrightCloud, zVelo PhishBlockList) and a "compare-protection" mode that queried Ermes' MongoDB. These are **not** part of the public release. See [`CHANGELOG.md`](CHANGELOG.md) for the full list of removed components and the rationale.
-- The original internal version also supported ~90 OSINT block-lists fetched from a private S3 bucket. A public-friendly OSINT downloader is on the roadmap for `v0.2.x`; in `v0.1.0` only the four API-based feeds above are available.
+- The original internal version also supported ~90 OSINT block-lists fetched from a private S3 bucket. A public-friendly OSINT downloader is on the roadmap for `v0.2.x`; in `v0.1.0` only the five API-based feeds above are available.
 - `phishstats.info` is occasionally rate-limited or unavailable upstream (HTTP 5xx via Cloudflare). The tool reports this with a warning and exits gracefully.
 
 ## Contributing

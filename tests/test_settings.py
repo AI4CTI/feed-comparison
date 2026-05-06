@@ -16,12 +16,18 @@ def test_settings_from_env_defaults_when_unset(monkeypatch):
         "PHISHTANK_USERNAME",
         "URLSCAN_URL",
         "URLSCAN_TOKEN",
+        "ERMES_API_SERVER",
+        "ERMES_CLIENT_ID",
+        "ERMES_CLIENT_SECRET",
         "FEED_COMPARISON_OUTPUT_DIR",
     ):
         monkeypatch.delenv(var, raising=False)
     settings = Settings.from_env(env_file=Path("/nonexistent"))
     assert settings.misp_url is None
     assert settings.phishtank_username is None
+    assert settings.ermes_api_server is None
+    assert settings.ermes_client_id is None
+    assert settings.ermes_client_secret is None
     assert settings.output_dir == Path("./output")
 
 
@@ -31,6 +37,16 @@ def test_settings_from_env_picks_up_values(monkeypatch):
     settings = Settings.from_env(env_file=Path("/nonexistent"))
     assert settings.phishtank_username == "stefano"
     assert settings.output_dir == Path("/tmp/fc-out")
+
+
+def test_settings_from_env_picks_up_ermes_credentials(monkeypatch):
+    monkeypatch.setenv("ERMES_API_SERVER", "https://api.example.ermes.company")
+    monkeypatch.setenv("ERMES_CLIENT_ID", "id-123")
+    monkeypatch.setenv("ERMES_CLIENT_SECRET", "secret-xyz")
+    settings = Settings.from_env(env_file=Path("/nonexistent"))
+    assert settings.ermes_api_server == "https://api.example.ermes.company"
+    assert settings.ermes_client_id == "id-123"
+    assert settings.ermes_client_secret == "secret-xyz"
 
 
 def test_settings_require_returns_values():

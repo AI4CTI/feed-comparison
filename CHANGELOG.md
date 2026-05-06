@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- New `ermes` feed integration over STIX/TAXII with OAuth 2.0 Client Credentials, opt-in via the new `[ermes]` extra (depends on `taxii2-client` and `requests-oauth2client`). Requires `ERMES_API_SERVER`, `ERMES_CLIENT_ID`, `ERMES_CLIENT_SECRET`. Surfaced in `feed-comparison list-feeds` for everyone, gated by credentials at fetch time (clean `MissingCredentialsError` for users without access).
+
 ## [0.1.0] — 2026-05-06
 
 First public release under the [AI4CTI](https://github.com/AI4CTI) organisation, on GitHub at <https://github.com/AI4CTI/feed-comparison>. The previous lifetime of this codebase as an Ermes-internal tool is intentionally not part of the public git history.

@@ -58,6 +58,7 @@ dependencies = [
 
 [project.optional-dependencies]
 misp = ["pymisp>=2.4"]
+ermes = ["taxii2-client>=2.3", "requests-oauth2client>=1.6"]
 dev = [
     "ruff>=0.5",
     "mypy>=1.10",
