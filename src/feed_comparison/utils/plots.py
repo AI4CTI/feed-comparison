@@ -75,7 +75,9 @@ def plot_timeplot(benchmark, feeds, downloaded_dfs, output_dir, days, run_id):
         merge[col_o] = pd.to_datetime(merge[col_o])
 
         diffs = pd.DataFrame(index=merge.index)
-        diffs["time_diff"] = (merge[col_b] - merge[col_o]).astype("timedelta64[h]") / 24.0
+        # pandas 2.x removed the `timedelta64[h]` cast; build the days-delta
+        # via total_seconds() instead, which works on all 1.x and 2.x.
+        diffs["time_diff"] = (merge[col_b] - merge[col_o]).dt.total_seconds() / 86400.0
         diffs = diffs[diffs.time_diff.notnull()]
 
         diffs.to_csv(
