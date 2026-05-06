@@ -12,6 +12,11 @@ jobs:
   analyze:
     name: Analyze (Python)
     runs-on: ubuntu-latest
+    # Code scanning requires GitHub Advanced Security on private repos and is
+    # free on public ones. The job runs only when the repo is public so it
+    # doesn't fail (and spam emails) while the repo is in private review.
+    # When the repo's visibility flips to public, this resumes automatically.
+    if: github.event.repository.visibility == 'public'
     permissions:
       actions: read
       contents: read
