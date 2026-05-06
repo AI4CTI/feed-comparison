@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+title: "feed-comparison: a CLI to compare and benchmark malicious-URL threat intelligence feeds"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Traverso
+    given-names: Stefano
+    affiliation: "Ermes Cyber Security S.p.A."
+  - name: "AI4CTI contributors"
+repository-code: "https://github.com/AI4CTI/feed-comparison"
+url: "https://github.com/AI4CTI/feed-comparison"
+license: AGPL-3.0-or-later
+version: "0.1.0"
+date-released: "2026-05-06"
+keywords:
+  - threat-intelligence
+  - malicious-urls
+  - phishing
+  - feed-comparison
+  - cyber-threat-intelligence
+  - ai4cti
+abstract: >-
+  feed-comparison is a reproducible command-line tool to compare
+  feeds of malicious URLs. It downloads samples from threat-
+  intelligence providers, normalises the URLs they expose with
+  Google Safe Browsing-style canonicalisation, and quantifies
+  how the feeds overlap (SuperVenn) and how their discovery
+  times compare (CDF of per-URL deltas).
+references:
+  - type: grant
+    title: >-
+      Italian Ministry of Education, Grant FISA-2023-00168
+      (AI4CTI: AI for Cyber Threat Intelligence)

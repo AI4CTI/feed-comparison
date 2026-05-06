@@ -10,7 +10,10 @@ requires-python = ">=3.10,<3.14"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [
-    { name = "AI4CTI" },
+    { name = "Ermes Cyber Security S.p.A.", email = "info@ermes.company" },
+]
+maintainers = [
+    { name = "Stefano Traverso" },
 ]
 keywords = [
     "threat-intelligence",

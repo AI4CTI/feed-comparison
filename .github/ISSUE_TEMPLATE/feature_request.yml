@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a new capability or an improvement to an existing one.
+labels: ["enhancement", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: A short description of the use case, not the proposed solution. "I'm trying to X but the tool currently makes me Y."
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: What do you propose?
+      description: Sketch the API/CLI you have in mind, if any. Bullet points are fine.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Workarounds, other tools, prior art.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I checked that no existing issue tracks this idea.
+          required: true

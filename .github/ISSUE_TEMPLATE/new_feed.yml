@@ -1,0 +1,48 @@
+name: Suggest a new feed
+description: Nominate a threat-intelligence feed you'd like to see supported.
+labels: ["new-feed", "triage"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Feed name
+      placeholder: "e.g. URLhaus"
+    validations:
+      required: true
+  - type: input
+    id: homepage
+    attributes:
+      label: Homepage URL
+      placeholder: "https://urlhaus.abuse.ch/"
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Access type
+      options:
+        - "Public API (no credentials)"
+        - "API with free credentials (e.g. signup required)"
+        - "Commercial API (paid)"
+        - "Static download (block-list / hosts file)"
+    validations:
+      required: true
+  - type: textarea
+    id: format
+    attributes:
+      label: Feed format
+      description: What does a sample look like? Hosts file, CSV, JSON, AdGuard syntax...
+  - type: input
+    id: license
+    attributes:
+      label: License (if known)
+      placeholder: "CC-BY-4.0 / CC0 / proprietary / unknown"
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: The feed's license permits programmatic access for the purpose of comparison.
+          required: true
+        - label: I checked the existing issues; this feed is not already proposed.
+          required: true

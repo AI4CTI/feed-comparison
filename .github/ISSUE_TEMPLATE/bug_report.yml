@@ -1,0 +1,57 @@
+name: Bug report
+description: Report unexpected behaviour, a crash, or a regression.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill out the
+        sections below; the more reproducible the report, the faster
+        we can fix it.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug. Include the exact command you ran and what you expected to see.
+      placeholder: |
+        $ feed-comparison compare phishstats phishtank --days 1
+        Expected: ... Got: ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: feed-comparison version
+      description: Output of `feed-comparison --version`.
+      placeholder: "feed-comparison 0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12.8"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Ubuntu 24.04 / macOS 14.5 / ..."
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / traceback
+      description: Paste any error message or traceback. Run with `--verbose` for debug-level logging.
+      render: shell
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I checked that no existing issue covers this bug.
+          required: true
+        - label: I am not reporting a security vulnerability (those go via SECURITY.md).
+          required: true
