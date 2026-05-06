@@ -47,7 +47,7 @@ def canonicalize_feed(df, short_name):
     df = df.set_index("normURLwoScheme", drop=True)
     df = df.sort_values(by="discovered_date")
 
-    aggregations = {col: list for col in df.columns}
+    aggregations = dict.fromkeys(df.columns, list)
     df = df.groupby(by=["normURLwoScheme"]).aggregate(aggregations)
 
     df = df.rename(columns={"discovered_date": "discovered_dates"})

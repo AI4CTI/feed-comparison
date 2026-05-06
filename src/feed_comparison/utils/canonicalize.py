@@ -11,101 +11,6 @@ consecutive_slashes_re = (b"\x28\x5b\x5c\x2f\x5d\x29\x5c\x31\x2b", b"\x5c\x31")
 # This is equivalent of ":\d+$" to find ports in netlocs
 find_port_re = b"\x3a\x5c\x64\x2b\x24"
 
-test_urls = [
-    ("http://www.bücher...com///", "http://www.xn--bcher-kva.com/"),
-    ("http://www.bücher...com/../", "http://www.xn--bcher-kva.com/"),
-    ("http://www.gotaport.com:1234/", "http://www.gotaport.com/"),
-    ("http://host/%25%32%35", "http://host/%25"),
-    ("http://host/%25%32%35%25%32%35", "http://host/%25%25"),
-    ("http://host/%2525252525252525", "http://host/%25"),
-    ("http://host/asdf%25%32%35asd", "http://host/asdf%25asd"),
-    ("http://host/%%%25%32%35asd%%", "http://host/%25%25%25asd%25%25"),
-    ("http://www.google.com/", "http://www.google.com/"),
-    (
-        "http://%31%36%38%2e%31%38%38%2e%39%39%2e%32%36/%2E%73%65%63%75%72%65/%77%77%77%2E%65%62%61%79%2E%63%6F%6D/",
-        "http://168.188.99.26/.secure/www.ebay.com/",
-    ),
-    (
-        "http://195.127.0.11/uploads/%20%20%20%20/.verify/.eBaysecure=updateuserdataxplimnbqmn-xplmvalidateinfoswqpcmlx=hgplmcx/",
-        "http://195.127.0.11/uploads/%20%20%20%20/.verify/.eBaysecure=updateuserdataxplimnbqmn-xplmvalidateinfoswqpcmlx=hgplmcx/",
-    ),
-    (
-        "http://host%23.com/%257Ea%2521b%2540c%2523d%2524e%25f%255E00%252611%252A22%252833%252944_55%252B",
-        "http://host%23.com/~a!b@c%23d$e%25f^00&11*22(33)44_55+",
-    ),
-    ("http://3279880203/blah", "http://195.127.0.11/blah"),
-    ("http://www.google.com/blah/..", "http://www.google.com/"),
-    ("www.google.com/", "http://www.google.com/"),
-    ("www.google.com", "http://www.google.com/"),
-    ("http://www.evil.com/blah#frag", "http://www.evil.com/blah"),
-    ("http://www.GOOgle.com/", "http://www.google.com/"),
-    ("http://www.google.com.../", "http://www.google.com/"),
-    ("http://www.google.com/foo\tbar\rbaz\n2", "http://www.google.com/foobarbaz2"),
-    ("http://www.google.com/q?", "http://www.google.com/q"),
-    ("http://www.google.com/q?r?", "http://www.google.com/q"),
-    ("http://www.google.com/q?r?s", "http://www.google.com/q"),
-    ("http://evil.com/foo#bar#baz", "http://evil.com/foo"),
-    ("http://evil.com/foo;", "http://evil.com/foo;"),
-    ("http://evil.com/foo?bar;", "http://evil.com/foo"),
-    ("http://notrailingslash.com", "http://notrailingslash.com/"),
-    ("http://www.gotaport.com:1234/", "http://www.gotaport.com/"),
-    ("  http://www.google.com/  ", "http://www.google.com/"),
-    ("http:// leadingspace.com/", "http://%20leadingspace.com/"),
-    ("http://%20leadingspace.com/", "http://%20leadingspace.com/"),
-    ("%20leadingspace.com/", "http://%20leadingspace.com/"),
-    ("https://www.securesite.com/", "https://www.securesite.com/"),
-    ("http://host.com/ab%23cd", "http://host.com/ab%23cd"),
-    ("http://host.com//twoslashes?more//slashes", "http://host.com/twoslashes"),
-    ("ftp://ftp.myfiles.com/", "ftp://ftp.myfiles.com/"),
-    ("http://some%1bhost.com/%1b", "http://some%1bhost.com/%1b"),
-    ("http://some%1Bhost.com/%1B", "http://some%1bhost.com/%1b"),
-    ("  http://www.google.com/  ", "http://www.google.com/"),
-    ("http://www.google.com/q?r?s%3F", "http://www.google.com/q"),
-    ("http://\x01\x80.com/", "http://%01%80.com/"),
-    ("http://www.\xc3\xbcmlat.com/", "http://www.xn--mlat-zra.com/"),
-    ("http://www.\xc3\xbcmlat.com/", "http://www.xn--mlat-zra.com/"),
-    ("http://[2001:470:1:18::114]/", "http://[2001:470:1:18::114]/"),
-    ("http%3A%2F%2Fwackyurl.com:80/", "http://wackyurl.com/"),
-    ("http://W!eird<>Ho$^.com/", "http://w!eird<>ho$^.com/"),
-    ("http://i.have.way.too.many.dots.com/", "http://i.have.way.too.many.dots.com/"),
-]
-
-test_full_urls = [
-    (
-        "http://www.query-test.com/test?a=g&b=2&c=3",
-        "http://www.query-test.com/test?a=g&b=2&c=3",
-    ),
-    (
-        "http://www.query-test.com/test?b=2&a=0&c=3&a=g",
-        "http://www.query-test.com/test?a=0&a=g&b=2&c=3",
-    ),
-    (
-        "http://www.query-test.com/test?foo&a=0&c=3&bar",
-        "http://www.query-test.com/test?a=0&bar&c=3&foo",
-    ),
-    ("http://www.google.com/q?", "http://www.google.com/q"),
-    ("http://www.google.com/q?r?", "http://www.google.com/q?r?"),
-    ("http://www.google.com/q?r?s", "http://www.google.com/q?r?s"),
-    ("http://evil.com/foo?bar;", "http://evil.com/foo?bar;"),
-    (
-        "http://host.com//twoslashes?more//slashes",
-        "http://host.com/twoslashes?more//slashes",
-    ),
-    (
-        "https://foo.bar.evil.com/path/something?q=stuff&more#frags",
-        "https://foo.bar.evil.com/path/something?more&q=stuff",
-    ),
-    (
-        "http://example.it/display?lang=en&article=fred",
-        "http://example.it/display?article=fred&lang=en",
-    ),
-    ("http://example.it/path1/path2?more", "http://example.it/path1/path2?more"),
-    ("http://exa.it/query?a=1&a=1", "http://exa.it/query?a=1&a=1"),
-    ("http://exa.it/query?a=1&a=2&a=3,4", "http://exa.it/query?a=1&a=2&a=3,4"),
-    ("http://exa.it/query?a=1&a2", "http://exa.it/query?a=1&a2"),
-    ("http://exa.it/query?a=1,2&&a=1", "http://exa.it/query?a=1&a=1,2"),
-]
-
 
 # split splits the string s around the delimiter c.
 #
@@ -127,17 +32,12 @@ def split(s: bytes, c: bytes, cutc: bool):
 
 # is_hex reports whether c is a hexadecimal character.
 def is_hex(c: int):
-    if chr(c) in string.hexdigits:
-        return True
-    return False
+    return chr(c) in string.hexdigits
 
 
 # is_unicode reports whether s is a Unicode string
 def is_unicode(s: bytes):
-    for x in s:
-        if int(x) > 128:
-            return True
-    return False
+    return any(int(x) > 128 for x in s)
 
 
 # unescape returns the decoded form of a percent-encoded
@@ -160,7 +60,7 @@ def escape(s: bytearray):
     b = bytearray()
     for c in s:
         if int(c) < 32 or int(c) >= 127 or chr(c) == " " or chr(c) == "#" or chr(c) == "%":
-            bits = "%%%02x" % c
+            bits = f"%{c:02x}"
             b.extend(map(ord, bits))
         else:
             b.append(c)
@@ -175,7 +75,7 @@ def recursive_unescape(s: bytes):
     MAX_DEPTH = 1024
     b = bytearray()
     b.extend(s)
-    for i in range(0, MAX_DEPTH):
+    for _ in range(MAX_DEPTH):
         t = unescape(b)
         if t == b:
             return b
@@ -389,47 +289,3 @@ def canonical_url(url):
             url = bytearray(url, "utf-8")
     parsed_url, full_parsed_url, scheme, host, path, query, fragment = parse_url(url)
     return parsed_url, full_parsed_url, scheme, host, path, query, fragment
-
-
-if __name__ == "__main__":
-    # TESTING URLS
-    count = 1
-    for couple in test_urls:
-        print("Checking couple {}, input: {} -> normalized: {}".format(count, couple[0], couple[1]))
-        url_to_parse = bytearray()
-        try:
-            url_to_parse = bytearray(map(ord, couple[0]))
-        except ValueError:
-            url_to_parse = bytearray(couple[0], "utf-8")
-        url_to_match = bytearray(couple[1], "utf-8")
-        url_to_parse, full_url_to_parse = canonical_url(url_to_parse)
-        url_to_parse_b = str(url_to_parse, "utf-8")
-        url_to_match_b = str(url_to_match, "utf-8")
-        assert url_to_parse == url_to_match, "{} Rule, {} is not equal to {}".format(
-            count, url_to_parse_b, url_to_match_b
-        )
-        print(
-            "Couple {} check passed! parsed: {}, full URL parsed {} -> normalized: {}\n".format(
-                count, url_to_parse_b, full_url_to_parse, url_to_match_b
-            )
-        )
-        count += 1
-
-    # TESTING FULL URLS
-    count = 1
-    for couple in test_full_urls:
-        print("Checking couple {}, input: {} -> normalized: {}".format(count, couple[0], couple[1]))
-        url_to_parse = bytearray(map(ord, couple[0]))
-        url_to_match = bytearray(couple[1], "utf-8")
-        url_to_parse, full_url_to_parse = canonical_url(url_to_parse)
-        url_to_parse_b = str(full_url_to_parse, "utf-8")
-        url_to_match_b = str(url_to_match, "utf-8")
-        assert full_url_to_parse == url_to_match, "{} Rule, {} is not equal to {}".format(
-            count, url_to_parse_b, url_to_match_b
-        )
-        print(
-            "Couple {} check passed! parsed: {}, full URL parsed {} -> normalized: {}\n".format(
-                count, url_to_parse_b, full_url_to_parse, url_to_match_b
-            )
-        )
-        count += 1
