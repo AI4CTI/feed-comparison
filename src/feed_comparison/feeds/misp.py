@@ -3,7 +3,7 @@ from io import StringIO
 import pandas as pd
 
 from feed_comparison.feeds.base import Feed
-from feed_comparison.settings import Settings
+from feed_comparison.settings import MissingOptionalDependencyError, Settings
 from feed_comparison.utils.normalize import canonicalize_feed
 
 
@@ -11,10 +11,7 @@ def _fetch_raw(days, base_url, token):
     try:
         from pymisp import ExpandedPyMISP
     except ImportError as exc:
-        raise RuntimeError(
-            "MISP support requires the optional 'misp' extra. "
-            "Install with: pip install 'feed-comparison[misp]'"
-        ) from exc
+        raise MissingOptionalDependencyError("misp", ["pymisp"]) from exc
 
     misp = ExpandedPyMISP(base_url, token, ssl=True)
     body = {

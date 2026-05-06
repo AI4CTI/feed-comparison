@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from feed_comparison.settings import MissingCredentialsError, Settings
+from feed_comparison.settings import (
+    MissingCredentialsError,
+    MissingOptionalDependencyError,
+    Settings,
+)
 
 
 def test_settings_from_env_defaults_when_unset(monkeypatch):
@@ -42,3 +46,12 @@ def test_settings_require_raises_when_missing():
     assert "phishtank_username" in exc.value.missing
     assert "urlscan_token" in exc.value.missing
     assert "PHISHTANK_USERNAME" in str(exc.value)
+
+
+def test_missing_optional_dependency_error_message_is_actionable():
+    err = MissingOptionalDependencyError("misp", ["pymisp"])
+    assert err.extra == "misp"
+    assert "pymisp" in err.packages
+    msg = str(err)
+    assert "feed-comparison[misp]" in msg
+    assert "pymisp" in msg

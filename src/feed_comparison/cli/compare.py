@@ -5,7 +5,11 @@ from pathlib import Path
 import typer
 
 from feed_comparison.feeds.registry import registry
-from feed_comparison.settings import MissingCredentialsError, Settings
+from feed_comparison.settings import (
+    MissingCredentialsError,
+    MissingOptionalDependencyError,
+    Settings,
+)
 from feed_comparison.utils.plots import plot_supervenn, plot_timeplot
 from feed_comparison.utils.time import filter_off_last_days, force_temporal_boundaries
 
@@ -52,7 +56,7 @@ def compare(
         _log.info("Downloading %s (%.1f days)...", name, days)
         try:
             df = feed.fetch(days=days, settings=settings)
-        except MissingCredentialsError as exc:
+        except (MissingCredentialsError, MissingOptionalDependencyError) as exc:
             _log.error("%s: %s", name, exc)
             raise typer.Exit(code=2) from None
         if df is None or df.empty:

@@ -73,3 +73,17 @@ class MissingCredentialsError(RuntimeError):
             f"Missing required credential(s): {env_hints}. "
             "Set them in the environment or in a .env file."
         )
+
+
+class MissingOptionalDependencyError(RuntimeError):
+    """Raised when a feed needs an optional Python package that is not installed."""
+
+    def __init__(self, extra, packages):
+        self.extra = extra
+        self.packages = list(packages)
+        pkgs = ", ".join(self.packages)
+        super().__init__(
+            f"This feed requires the optional '{extra}' extra (Python package(s): {pkgs}). "
+            f"Install it with: uv tool install --force 'feed-comparison[{extra}]' "
+            f"(or: pip install 'feed-comparison[{extra}]')."
+        )
