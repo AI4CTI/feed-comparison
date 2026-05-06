@@ -1,12 +1,28 @@
+import logging
+
 import pandas as pd
 import tldextract
 
 from feed_comparison.utils import canonicalize
 from feed_comparison.utils.text import get_hostname, is_ip_address
 
+_log = logging.getLogger(__name__)
+
 
 def _canonical_url_with_scheme(url):
     return canonicalize.canonical_url(url)[0].decode()
+
+
+def _strip_scheme(canonical):
+    """Return the URL without its `scheme://` prefix, or "" if no scheme is present.
+
+    Some entries (notably from MISP, where attribute values can be effectively
+    anything) survive `canonical_url` without producing a `//` separator. We
+    return an empty string for those and let the caller drop them, instead of
+    crashing with IndexError.
+    """
+    _, sep, rest = canonical.partition("//")
+    return rest if sep else ""
 
 
 def _domain_of(url_no_scheme):
@@ -37,8 +53,28 @@ def canonicalize_feed(df, short_name):
         return df
 
     df = df.copy()
+    # Drop NaN/empty URLs up front: feeds like MISP can expose any attribute
+    # value as a "url", including blanks that crash canonicalisation.
+    initial = len(df)
+    df = df[df["url"].notna() & (df["url"].astype(str).str.strip() != "")]
+    if len(df) < initial:
+        _log.debug("canonicalize_feed: dropped %d empty/NaN URLs", initial - len(df))
+    if df.empty:
+        return df
+
     df["normURLwScheme"] = df["url"].map(_canonical_url_with_scheme)
-    df["normURLwoScheme"] = df["normURLwScheme"].map(lambda u: u.split("//", 1)[1])
+    df["normURLwoScheme"] = df["normURLwScheme"].map(_strip_scheme)
+    # Drop entries that survived canonicalisation without a scheme/host —
+    # they can't be merged or compared meaningfully.
+    pre = len(df)
+    df = df[df["normURLwoScheme"] != ""]
+    if len(df) < pre:
+        _log.debug(
+            "canonicalize_feed: dropped %d unparseable URLs after canonicalisation",
+            pre - len(df),
+        )
+    if df.empty:
+        return df
 
     # Comma-to-tab to keep CSV serialisation safe even for fields that
     # legitimately contain commas (titles, descriptions...).

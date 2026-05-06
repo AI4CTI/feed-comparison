@@ -67,3 +67,35 @@ def test_canonicalize_feed_suffixes_non_reserved_columns_only():
 def test_canonicalize_feed_returns_input_when_empty():
     out = canonicalize_feed(pd.DataFrame(columns=["url", "discovered_date"]), "demo")
     assert out.empty
+
+
+def test_canonicalize_feed_drops_empty_and_nan_urls():
+    df = canonicalize_feed(
+        pd.DataFrame(
+            {
+                "url": ["http://valid.example.com/", "", None, "   "],
+                "discovered_date": [datetime(2026, 1, 1)] * 4,
+            }
+        ),
+        "demo",
+    )
+    # Only the one valid row survives.
+    assert len(df) == 1
+    assert "valid.example.com" in df["hostname"].iloc[0]
+
+
+def test_canonicalize_feed_drops_unparseable_urls_without_crashing():
+    """Regression: MISP attributes can yield URLs whose canonical form has
+    no scheme and would explode the legacy `split('//', 1)[1]` indexer."""
+    df = canonicalize_feed(
+        pd.DataFrame(
+            {
+                "url": ["http://ok.example.com/", "@@@nonsense@@@"],
+                "discovered_date": [datetime(2026, 1, 1), datetime(2026, 1, 2)],
+            }
+        ),
+        "demo",
+    )
+    # The valid URL must survive; the nonsense one is silently dropped.
+    assert len(df) >= 1
+    assert any("ok.example.com" in h for h in df["hostname"])
