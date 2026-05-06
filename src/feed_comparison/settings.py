@@ -1,6 +1,6 @@
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
@@ -8,7 +8,20 @@ from dotenv import find_dotenv, load_dotenv
 _log = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
+# Field names whose values are sensitive credentials. Their content is
+# masked in ``Settings.__repr__`` so a stray ``print(settings)`` (e.g. in
+# a debug session or a bug report) does not leak active tokens.
+_SECRET_FIELDS = frozenset(
+    {
+        "misp_key",
+        "urlscan_token",
+        "ermes_client_id",
+        "ermes_client_secret",
+    }
+)
+
+
+@dataclass(frozen=True, repr=False)
 class Settings:
     """Runtime configuration loaded from environment variables and ``.env``.
 
@@ -28,6 +41,14 @@ class Settings:
 
     # Generic
     output_dir: Path = Path("./output")
+
+    def __repr__(self):
+        parts = []
+        for f in fields(self):
+            value = getattr(self, f.name)
+            shown = "'***'" if f.name in _SECRET_FIELDS and value else repr(value)
+            parts.append(f"{f.name}={shown}")
+        return f"Settings({', '.join(parts)})"
 
     @classmethod
     def from_env(cls, env_file=None):

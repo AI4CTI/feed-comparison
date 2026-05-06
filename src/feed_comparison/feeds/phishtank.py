@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timedelta
 
 import pandas as pd
-import requests
 
+from feed_comparison.feeds._http import bounded_get
 from feed_comparison.feeds.base import Feed
 from feed_comparison.settings import Settings
 from feed_comparison.utils.normalize import canonicalize_feed
@@ -20,7 +20,9 @@ def _parse_submission_time(s):
 def _fetch_raw(days, username):
     cutoff = datetime.utcnow() - timedelta(days=days)
     headers = {"User-Agent": f"phishtank/{username}"}
-    resp = requests.get(_DOWNLOAD_URL, headers=headers, timeout=120)
+    # PhishTank's online-valid.csv weighs ~50 MB; the default 256 MB cap
+    # leaves comfortable head-room while still bounding pathological responses.
+    resp = bounded_get(_DOWNLOAD_URL, headers=headers, timeout=120)
     resp.raise_for_status()
 
     from io import StringIO

@@ -1,6 +1,6 @@
 import pandas as pd
-import requests
 
+from feed_comparison.feeds._http import bounded_get
 from feed_comparison.feeds.base import Feed
 from feed_comparison.settings import Settings
 from feed_comparison.utils.normalize import canonicalize_feed
@@ -10,7 +10,7 @@ def _fetch_raw(days, base_url, token):
     days = max(int(days), 1)
     headers = {"API-Key": token}
     url = f"{base_url}?format=json&q=date:%3Enow-{days}d"
-    resp = requests.get(url, headers=headers, timeout=120)
+    resp = bounded_get(url, headers=headers, timeout=120)
     resp.raise_for_status()
 
     results = resp.json().get("results", [])

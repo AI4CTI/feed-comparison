@@ -4,8 +4,8 @@ import time
 from datetime import datetime, timedelta
 
 import pandas as pd
-import requests
 
+from feed_comparison.feeds._http import bounded_get
 from feed_comparison.feeds.base import Feed
 from feed_comparison.settings import Settings
 from feed_comparison.utils.normalize import canonicalize_feed
@@ -22,7 +22,7 @@ def _parse_date(s):
 
 def _query_page(page):
     time.sleep(_REQUEST_DELAY_S)
-    resp = requests.get(f"{_API_URL}&_p={page}", timeout=60)
+    resp = bounded_get(f"{_API_URL}&_p={page}", timeout=60)
     if resp.status_code > 201:
         _log.warning(
             "PhishStats page %d returned HTTP %d (server-side issue, aborting)",

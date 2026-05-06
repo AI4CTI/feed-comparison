@@ -71,3 +71,36 @@ def test_missing_optional_dependency_error_message_is_actionable():
     msg = str(err)
     assert "feed-comparison[misp]" in msg
     assert "pymisp" in msg
+
+
+def test_settings_repr_masks_secret_fields():
+    s = Settings(
+        misp_url="https://misp.example.org",
+        misp_key="super-secret-misp",
+        phishtank_username="alice",
+        urlscan_url="https://urlscan.io/api/v1/search/",
+        urlscan_token="super-secret-urlscan",
+        ermes_api_server="https://api.example.ermes.company",
+        ermes_client_id="oauth-client-id-XYZ",
+        ermes_client_secret="oauth-secret-XYZ",
+    )
+    rendered = repr(s)
+    # Non-secret fields stay readable (debugging is the point of __repr__).
+    assert "https://misp.example.org" in rendered
+    assert "alice" in rendered
+    assert "https://urlscan.io/api/v1/search/" in rendered
+    assert "https://api.example.ermes.company" in rendered
+    # Secret fields are masked, regardless of how they are formatted.
+    assert "super-secret-misp" not in rendered
+    assert "super-secret-urlscan" not in rendered
+    assert "oauth-client-id-XYZ" not in rendered
+    assert "oauth-secret-XYZ" not in rendered
+    assert "'***'" in rendered
+
+
+def test_settings_repr_does_not_mask_unset_secrets():
+    s = Settings()
+    rendered = repr(s)
+    # An unset secret stays as `None`, not `'***'`.
+    assert "misp_key=None" in rendered
+    assert "ermes_client_secret=None" in rendered
