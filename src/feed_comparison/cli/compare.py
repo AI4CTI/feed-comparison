@@ -66,6 +66,19 @@ def compare(
         except _PER_FEED_ERRORS as exc:
             _log.error("%s: %s (skipping)", name, exc)
             continue
+        except Exception as exc:
+            # Unexpected per-feed failure (HTTPError, transient network issue,
+            # upstream API change, ...). One concise ERROR line, plus the full
+            # traceback at DEBUG level so it's available with `--verbose`. We
+            # don't abort the whole run — other feeds may still produce data.
+            _log.error(
+                "%s: unexpected error during fetch (skipping): %s: %s",
+                name,
+                type(exc).__name__,
+                exc,
+            )
+            _log.debug("%s: traceback:", name, exc_info=True)
+            continue
         if df is None or df.empty:
             _log.warning("%s: no data returned, skipping", name)
             continue

@@ -77,3 +77,40 @@ def test_download_exits_nonzero_when_all_feeds_fail(tmp_path, monkeypatch):
     monkeypatch.delenv("URLSCAN_TOKEN", raising=False)
     result = runner.invoke(app, ["download", "phishtank", "urlscan", "--output-dir", str(tmp_path)])
     assert result.exit_code == 2
+
+
+@responses.activate
+def test_download_skips_feed_on_unexpected_exception(tmp_path, monkeypatch):
+    """Regression: an HTTPError (or any non-typed exception) raised by a single
+    feed must not abort the whole `download` run."""
+    monkeypatch.setattr("feed_comparison.feeds.phishstats._REQUEST_DELAY_S", 0)
+    monkeypatch.setenv("PHISHTANK_USERNAME", "anonymous")
+    # PhishTank's CDN download URL returns 404 → HTTPError, which is NOT
+    # one of MissingCredentials/MissingOptional/FeedConfiguration.
+    from feed_comparison.feeds.phishtank import _DOWNLOAD_URL
+
+    responses.add(responses.GET, _DOWNLOAD_URL, status=404)
+    # PhishStats works.
+    now = datetime.utcnow()
+    responses.add(
+        responses.GET,
+        f"{_API_URL}&_p=0",
+        json=[
+            {
+                "url": "http://x.example.com/",
+                "date": (now - timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            }
+        ],
+        status=200,
+    )
+    responses.add(responses.GET, f"{_API_URL}&_p=1", json=[], status=200)
+
+    result = runner.invoke(
+        app,
+        ["download", "phishtank", "phishstats", "--days", "1", "--output-dir", str(tmp_path)],
+    )
+    # phishtank crashes with HTTPError, phishstats writes its CSV → exit 0.
+    assert result.exit_code == 0, result.stdout
+    csvs = list(tmp_path.glob("dataframe_*.csv"))
+    assert len(csvs) == 1
+    assert csvs[0].name.startswith("dataframe_phishstats_")
