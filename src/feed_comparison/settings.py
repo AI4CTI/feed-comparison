@@ -1,8 +1,11 @@
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -27,10 +30,22 @@ class Settings:
     def from_env(cls, env_file=None):
         """Build a Settings instance from environment variables.
 
-        Optionally loads a ``.env`` file first. The default search behaviour
-        of ``python-dotenv`` walks up from the current working directory.
+        If ``env_file`` is given, that file is loaded; otherwise we walk up
+        from the *current working directory* looking for a ``.env`` file.
+        We must pass ``usecwd=True`` to ``find_dotenv``: the default
+        behaviour starts the search from the caller's source file, which
+        breaks completely when ``feed-comparison`` is installed as a tool
+        (the caller then lives inside an isolated tool venv, far from the
+        user's project directory).
         """
-        load_dotenv(dotenv_path=env_file, override=False)
+        dotenv_path = str(env_file) if env_file is not None else find_dotenv(usecwd=True)
+
+        if dotenv_path:
+            loaded = load_dotenv(dotenv_path=dotenv_path, override=False)
+            if loaded:
+                _log.debug("Loaded environment from %s", dotenv_path)
+        else:
+            _log.debug("No .env file found while walking up from %s", Path.cwd())
 
         output_dir = os.environ.get("FEED_COMPARISON_OUTPUT_DIR", "./output")
         return cls(
