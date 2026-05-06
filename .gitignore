@@ -68,10 +68,10 @@ Thumbs.db
 *credentials*
 *secret*
 
-# Generated artifacts (default output dirs of the tool)
-data/
-results/
-output/
+# Generated artifacts (default output dirs of the tool, root-only).
+/data/
+/results/
+/output/
 
 # CSV outputs (allow only fixtures under tests/data/)
 *.csv

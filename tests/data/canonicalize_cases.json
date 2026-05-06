@@ -1,0 +1,254 @@
+{
+  "partial": [
+    {
+      "input": "http://www.bücher...com///",
+      "expected": "http://www.xn--bcher-kva.com/"
+    },
+    {
+      "input": "http://www.bücher...com/../",
+      "expected": "http://www.xn--bcher-kva.com/"
+    },
+    {
+      "input": "http://www.gotaport.com:1234/",
+      "expected": "http://www.gotaport.com/"
+    },
+    {
+      "input": "http://host/%25%32%35",
+      "expected": "http://host/%25"
+    },
+    {
+      "input": "http://host/%25%32%35%25%32%35",
+      "expected": "http://host/%25%25"
+    },
+    {
+      "input": "http://host/%2525252525252525",
+      "expected": "http://host/%25"
+    },
+    {
+      "input": "http://host/asdf%25%32%35asd",
+      "expected": "http://host/asdf%25asd"
+    },
+    {
+      "input": "http://host/%%%25%32%35asd%%",
+      "expected": "http://host/%25%25%25asd%25%25"
+    },
+    {
+      "input": "http://www.google.com/",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "http://%31%36%38%2e%31%38%38%2e%39%39%2e%32%36/%2E%73%65%63%75%72%65/%77%77%77%2E%65%62%61%79%2E%63%6F%6D/",
+      "expected": "http://168.188.99.26/.secure/www.ebay.com/"
+    },
+    {
+      "input": "http://195.127.0.11/uploads/%20%20%20%20/.verify/.eBaysecure=updateuserdataxplimnbqmn-xplmvalidateinfoswqpcmlx=hgplmcx/",
+      "expected": "http://195.127.0.11/uploads/%20%20%20%20/.verify/.eBaysecure=updateuserdataxplimnbqmn-xplmvalidateinfoswqpcmlx=hgplmcx/"
+    },
+    {
+      "input": "http://host%23.com/%257Ea%2521b%2540c%2523d%2524e%25f%255E00%252611%252A22%252833%252944_55%252B",
+      "expected": "http://host%23.com/~a!b@c%23d$e%25f^00&11*22(33)44_55+"
+    },
+    {
+      "input": "http://3279880203/blah",
+      "expected": "http://195.127.0.11/blah"
+    },
+    {
+      "input": "http://www.google.com/blah/..",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "www.google.com/",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "www.google.com",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "http://www.evil.com/blah#frag",
+      "expected": "http://www.evil.com/blah"
+    },
+    {
+      "input": "http://www.GOOgle.com/",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "http://www.google.com.../",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "http://www.google.com/foo\tbar\rbaz\n2",
+      "expected": "http://www.google.com/foobarbaz2"
+    },
+    {
+      "input": "http://www.google.com/q?",
+      "expected": "http://www.google.com/q"
+    },
+    {
+      "input": "http://www.google.com/q?r?",
+      "expected": "http://www.google.com/q"
+    },
+    {
+      "input": "http://www.google.com/q?r?s",
+      "expected": "http://www.google.com/q"
+    },
+    {
+      "input": "http://evil.com/foo#bar#baz",
+      "expected": "http://evil.com/foo"
+    },
+    {
+      "input": "http://evil.com/foo;",
+      "expected": "http://evil.com/foo;"
+    },
+    {
+      "input": "http://evil.com/foo?bar;",
+      "expected": "http://evil.com/foo"
+    },
+    {
+      "input": "http://notrailingslash.com",
+      "expected": "http://notrailingslash.com/"
+    },
+    {
+      "input": "http://www.gotaport.com:1234/",
+      "expected": "http://www.gotaport.com/"
+    },
+    {
+      "input": "  http://www.google.com/  ",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "http:// leadingspace.com/",
+      "expected": "http://%20leadingspace.com/"
+    },
+    {
+      "input": "http://%20leadingspace.com/",
+      "expected": "http://%20leadingspace.com/"
+    },
+    {
+      "input": "%20leadingspace.com/",
+      "expected": "http://%20leadingspace.com/"
+    },
+    {
+      "input": "https://www.securesite.com/",
+      "expected": "https://www.securesite.com/"
+    },
+    {
+      "input": "http://host.com/ab%23cd",
+      "expected": "http://host.com/ab%23cd"
+    },
+    {
+      "input": "http://host.com//twoslashes?more//slashes",
+      "expected": "http://host.com/twoslashes"
+    },
+    {
+      "input": "ftp://ftp.myfiles.com/",
+      "expected": "ftp://ftp.myfiles.com/"
+    },
+    {
+      "input": "http://some%1bhost.com/%1b",
+      "expected": "http://some%1bhost.com/%1b"
+    },
+    {
+      "input": "http://some%1Bhost.com/%1B",
+      "expected": "http://some%1bhost.com/%1b"
+    },
+    {
+      "input": "  http://www.google.com/  ",
+      "expected": "http://www.google.com/"
+    },
+    {
+      "input": "http://www.google.com/q?r?s%3F",
+      "expected": "http://www.google.com/q"
+    },
+    {
+      "input": "http://\u0001.com/",
+      "expected": "http://%01%80.com/"
+    },
+    {
+      "input": "http://www.Ã¼mlat.com/",
+      "expected": "http://www.xn--mlat-zra.com/"
+    },
+    {
+      "input": "http://www.Ã¼mlat.com/",
+      "expected": "http://www.xn--mlat-zra.com/"
+    },
+    {
+      "input": "http://[2001:470:1:18::114]/",
+      "expected": "http://[2001:470:1:18::114]/"
+    },
+    {
+      "input": "http%3A%2F%2Fwackyurl.com:80/",
+      "expected": "http://wackyurl.com/"
+    },
+    {
+      "input": "http://W!eird<>Ho$^.com/",
+      "expected": "http://w!eird<>ho$^.com/"
+    },
+    {
+      "input": "http://i.have.way.too.many.dots.com/",
+      "expected": "http://i.have.way.too.many.dots.com/"
+    }
+  ],
+  "full": [
+    {
+      "input": "http://www.query-test.com/test?a=g&b=2&c=3",
+      "expected": "http://www.query-test.com/test?a=g&b=2&c=3"
+    },
+    {
+      "input": "http://www.query-test.com/test?b=2&a=0&c=3&a=g",
+      "expected": "http://www.query-test.com/test?a=0&a=g&b=2&c=3"
+    },
+    {
+      "input": "http://www.query-test.com/test?foo&a=0&c=3&bar",
+      "expected": "http://www.query-test.com/test?a=0&bar&c=3&foo"
+    },
+    {
+      "input": "http://www.google.com/q?",
+      "expected": "http://www.google.com/q"
+    },
+    {
+      "input": "http://www.google.com/q?r?",
+      "expected": "http://www.google.com/q?r?"
+    },
+    {
+      "input": "http://www.google.com/q?r?s",
+      "expected": "http://www.google.com/q?r?s"
+    },
+    {
+      "input": "http://evil.com/foo?bar;",
+      "expected": "http://evil.com/foo?bar;"
+    },
+    {
+      "input": "http://host.com//twoslashes?more//slashes",
+      "expected": "http://host.com/twoslashes?more//slashes"
+    },
+    {
+      "input": "https://foo.bar.evil.com/path/something?q=stuff&more#frags",
+      "expected": "https://foo.bar.evil.com/path/something?more&q=stuff"
+    },
+    {
+      "input": "http://example.it/display?lang=en&article=fred",
+      "expected": "http://example.it/display?article=fred&lang=en"
+    },
+    {
+      "input": "http://example.it/path1/path2?more",
+      "expected": "http://example.it/path1/path2?more"
+    },
+    {
+      "input": "http://exa.it/query?a=1&a=1",
+      "expected": "http://exa.it/query?a=1&a=1"
+    },
+    {
+      "input": "http://exa.it/query?a=1&a=2&a=3,4",
+      "expected": "http://exa.it/query?a=1&a=2&a=3,4"
+    },
+    {
+      "input": "http://exa.it/query?a=1&a2",
+      "expected": "http://exa.it/query?a=1&a2"
+    },
+    {
+      "input": "http://exa.it/query?a=1,2&&a=1",
+      "expected": "http://exa.it/query?a=1&a=1,2"
+    }
+  ]
+}
