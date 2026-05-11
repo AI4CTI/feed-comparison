@@ -15,12 +15,16 @@ from feed_comparison.settings import (
 def test_parse_iso8601_handles_zulu_suffix():
     dt = _parse_iso8601("2026-04-29T12:34:56Z")
     assert dt.year == 2026
-    assert dt.tzinfo is not None  # offset-aware
+    # Normalised to tz-naive UTC for compatibility with the other feeds
+    assert dt.tzinfo is None
 
 
 def test_parse_iso8601_handles_explicit_offset():
+    # +02:00 means 12:34:56 local == 10:34:56 UTC
     dt = _parse_iso8601("2026-04-29T12:34:56+02:00")
-    assert dt.utcoffset().total_seconds() == 2 * 3600
+    assert dt.tzinfo is None
+    assert dt.hour == 10
+    assert dt.minute == 34
 
 
 def test_iocs_to_rows_maps_full_payload():

@@ -18,10 +18,19 @@ _PER_REQUEST = 50
 
 
 def _parse_iso8601(value):
-    """Parse an ISO 8601 timestamp; tolerate the trailing `Z` on Python 3.10."""
+    """Parse an ISO 8601 timestamp into a tz-naive UTC datetime.
+
+    The Ermes feed emits offset-aware timestamps (`...Z` or `+HH:MM`).
+    Every other feed in this tool stores `discovered_date` as tz-naive
+    UTC, so we normalise here to keep them all comparable — otherwise
+    pandas refuses to subtract aware from naive in the time-delta CDF.
+    """
     if value.endswith("Z"):
         value = value[:-1] + "+00:00"
-    return datetime.fromisoformat(value)
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
 
 
 def _iocs_to_rows(meta_iter):

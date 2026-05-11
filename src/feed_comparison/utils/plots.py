@@ -13,6 +13,23 @@ from feed_comparison.utils.text import cut_filename
 
 _log = logging.getLogger(__name__)
 
+
+def _to_naive_utc(series):
+    """Coerce a series of date-like strings/datetimes to tz-naive UTC.
+
+    Different feeds emit `discovered_date` with different timezone
+    conventions (Ermes uses offset-aware, MISP/PhishTank/PhishStats use
+    naive UTC). Without this normalisation the time-delta arithmetic in
+    `plot_timeplot` raises:
+        TypeError: Cannot subtract tz-naive and tz-aware datetime-like objects
+    Forcing through `utc=True` reads naive values as UTC and converts
+    aware values to UTC, then we drop the tzinfo so subtraction with
+    other naive series is well-defined.
+    """
+    parsed = pd.to_datetime(series, utc=True, errors="coerce")
+    return parsed.dt.tz_localize(None)
+
+
 _CYCLER_LINESPOINTS = (
     cycler("color", ["r", "b", "g", "purple", "c", "black", "orange", "grey"])
     + cycler(
@@ -71,8 +88,8 @@ def plot_timeplot(benchmark, feeds, downloaded_dfs, output_dir, days, run_id):
 
         col_b = f"discovered_date_{bench_short}"
         col_o = f"discovered_date_{other_short}"
-        merge[col_b] = pd.to_datetime(merge[col_b])
-        merge[col_o] = pd.to_datetime(merge[col_o])
+        merge[col_b] = _to_naive_utc(merge[col_b])
+        merge[col_o] = _to_naive_utc(merge[col_o])
 
         diffs = pd.DataFrame(index=merge.index)
         # pandas 2.x removed the `timedelta64[h]` cast; build the days-delta
