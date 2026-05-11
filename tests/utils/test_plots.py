@@ -122,6 +122,94 @@ def test_plot_timeplot_handles_mixed_timezone_feeds(tmp_path):
     assert fastplot_mock.plot.called
 
 
+def test_plot_timeplot_sign_convention_benchmark_after_other_is_positive(tmp_path):
+    """Pin the sign convention used in the legend: the time_diff CSV
+    column is `benchmark - other`. Therefore:
+        time_diff > 0  ⟹  benchmark saw the URL AFTER the other feed
+        time_diff < 0  ⟹  benchmark saw the URL BEFORE the other feed
+    A regression here would silently invert every CDF interpretation."""
+    _register_fake("bench", "bench")
+    _register_fake("other", "other")
+
+    # benchmark sees the shared URL on Jan 5; other sees it on Jan 1.
+    # benchmark is therefore *later*, so time_diff must be +4.0 days.
+    df_bench = canonicalize_feed(
+        pd.DataFrame(
+            {
+                "url": ["http://shared.example.com/x"],
+                "discovered_date": [datetime(2026, 1, 5)],
+            }
+        ),
+        "bench",
+    )
+    df_other = canonicalize_feed(
+        pd.DataFrame(
+            {
+                "url": ["http://shared.example.com/x"],
+                "discovered_date": [datetime(2026, 1, 1)],
+            }
+        ),
+        "other",
+    )
+
+    with patch("feed_comparison.utils.plots.fastplot"):
+        plot_timeplot(
+            "bench",
+            ["bench", "other"],
+            {"bench": df_bench, "other": df_other},
+            str(tmp_path),
+            1,
+            "sign",
+        )
+
+    csvs = list(tmp_path.glob("timedelta_bench-vs-other_*.csv"))
+    assert len(csvs) == 1
+    diffs = pd.read_csv(csvs[0])
+    assert len(diffs) == 1
+    assert diffs["time_diff"].iloc[0] == 4.0  # +4 days, benchmark is later
+
+
+def test_plot_timeplot_sign_convention_benchmark_before_other_is_negative(tmp_path):
+    """Mirror of the previous test for the negative-delta direction."""
+    _register_fake("bench3", "bench3")
+    _register_fake("other3", "other3")
+
+    df_bench = canonicalize_feed(
+        pd.DataFrame(
+            {
+                "url": ["http://shared.example.com/x"],
+                "discovered_date": [datetime(2026, 1, 1)],
+            }
+        ),
+        "bench3",
+    )
+    df_other = canonicalize_feed(
+        pd.DataFrame(
+            {
+                "url": ["http://shared.example.com/x"],
+                "discovered_date": [datetime(2026, 1, 5)],
+            }
+        ),
+        "other3",
+    )
+
+    with patch("feed_comparison.utils.plots.fastplot"):
+        plot_timeplot(
+            "bench3",
+            ["bench3", "other3"],
+            {"bench3": df_bench, "other3": df_other},
+            str(tmp_path),
+            1,
+            "sign-neg",
+        )
+
+    csvs = list(tmp_path.glob("timedelta_bench3-vs-other3_*.csv"))
+    assert len(csvs) == 1
+    diffs = pd.read_csv(csvs[0])
+    assert len(diffs) == 1
+    assert diffs["time_diff"].iloc[0] == -4.0  # -4 days, benchmark is earlier
+
+
 def test_plot_timeplot_returns_none_when_no_intersection(tmp_path):
     _register_fake("alpha2", "alpha2")
     _register_fake("beta2", "beta2")
