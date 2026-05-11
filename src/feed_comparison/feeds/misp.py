@@ -34,7 +34,9 @@ class Misp:
     description = "Self-hosted MISP instance; requires base URL and API key."
     requires_credentials: tuple[str, ...] = ("misp_url", "misp_key")
 
-    def fetch(self, days, settings: Settings):
+    def fetch(self, days, settings: Settings, skip_recent_days: float = 0.0):
+        # `skip_recent_days` is a hint we ignore: MISP's restSearch returns
+        # the whole window in one call; there is no incremental work to skip.
         url, key = settings.require(*self.requires_credentials)
         raw = _fetch_raw(days, url, key)
         return canonicalize_feed(raw, self.short_name)

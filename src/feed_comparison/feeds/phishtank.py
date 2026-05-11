@@ -46,7 +46,9 @@ class PhishTank:
     description = "Public phishing feed; requires a free PhishTank username."
     requires_credentials: tuple[str, ...] = ("phishtank_username",)
 
-    def fetch(self, days, settings: Settings):
+    def fetch(self, days, settings: Settings, skip_recent_days: float = 0.0):
+        # `skip_recent_days` is a hint we ignore: PhishTank serves a single
+        # ~50 MB CSV in one shot, so there is no incremental work to skip.
         (username,) = settings.require(*self.requires_credentials)
         raw = _fetch_raw(days, username)
         return canonicalize_feed(raw, self.short_name)

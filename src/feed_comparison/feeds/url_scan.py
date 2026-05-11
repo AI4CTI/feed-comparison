@@ -30,7 +30,9 @@ class UrlScan:
     description = "urlscan.io search API; requires endpoint URL and an API token."
     requires_credentials: tuple[str, ...] = ("urlscan_url", "urlscan_token")
 
-    def fetch(self, days, settings: Settings):
+    def fetch(self, days, settings: Settings, skip_recent_days: float = 0.0):
+        # `skip_recent_days` is a hint we ignore: urlscan's search API returns
+        # the whole window in one call; there is no incremental work to skip.
         url, token = settings.require(*self.requires_credentials)
         raw = _fetch_raw(days, url, token)
         return canonicalize_feed(raw, self.short_name)

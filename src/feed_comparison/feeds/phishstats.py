@@ -106,7 +106,11 @@ class PhishStats:
     description = "Public phishing IoC feed (no credentials required)."
     requires_credentials: tuple[str, ...] = ()
 
-    def fetch(self, days, settings: Settings):
+    def fetch(self, days, settings: Settings, skip_recent_days: float = 0.0):
+        # `skip_recent_days` is a hint we currently ignore: PhishStats
+        # paginates newest-first, and acting on the hint would mean *skipping*
+        # initial pages — the API has no way to start mid-feed, so we'd still
+        # have to fetch them. The caller's post-fetch filter trims the window.
         raw = _fetch_raw(days)
         return canonicalize_feed(raw, self.short_name)
 

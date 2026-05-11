@@ -69,7 +69,7 @@ def _iocs_to_rows(meta_iter):
     return rows
 
 
-def _fetch_raw(days, api_server, client_id, client_secret):
+def _fetch_raw(days, api_server, client_id, client_secret, skip_recent_days=0.0):
     try:
         from requests import HTTPError
         from requests_oauth2client import OAuth2Client, OAuth2ClientCredentialsAuth
@@ -94,6 +94,13 @@ def _fetch_raw(days, api_server, client_id, client_secret):
     api_root = ApiRoot(feed_url, auth=auth)
 
     cutoff = datetime.now(tz=timezone.utc) - timedelta(days=days)
+    # When the caller plans to drop the last N days anyway, stop paging as
+    # soon as we cross that boundary — the TAXII server returns objects in
+    # ascending order of `discovered`, so once `newest_seen` passes the
+    # upper cutoff every subsequent IoC would be discarded by the caller.
+    upper_cutoff = (
+        datetime.utcnow() - timedelta(days=skip_recent_days) if skip_recent_days > 0 else None
+    )
 
     rows = []
     try:
@@ -110,27 +117,31 @@ def _fetch_raw(days, api_server, client_id, client_secret):
         run_start = time.monotonic()
         last_log_time = run_start
         last_log_iocs = 0
-        # Track the oldest IoC discovered_date seen across all pages so
-        # the user can tell how far back into --days the run has reached.
-        oldest_seen = None
+        # Track the newest IoC discovered_date seen across all pages. The
+        # TAXII server returns objects in ascending order of discovery, so
+        # `newest_seen` advances monotonically toward "now" as we consume
+        # pages — which is exactly the progress signal the user wants. The
+        # earlier "oldest" metric was misleading: it locked to the first
+        # page's value and never updated, so every log line looked stuck.
+        newest_seen = None
         now_utc = datetime.utcnow()
         for page_num, page in enumerate(pages, start=1):
             metas = (obj.get("ermes_metadata", {}) for obj in page.get("objects", []))
             new_rows = _iocs_to_rows(metas)
             rows.extend(new_rows)
             if new_rows:
-                page_oldest = min(r["discovered_date"] for r in new_rows)
-                oldest_seen = page_oldest if oldest_seen is None else min(oldest_seen, page_oldest)
+                page_newest = max(r["discovered_date"] for r in new_rows)
+                newest_seen = page_newest if newest_seen is None else max(newest_seen, page_newest)
             if page_num % _PROGRESS_EVERY_N_PAGES == 0:
                 now = time.monotonic()
                 interval_iocs = len(rows) - last_log_iocs
                 interval_secs = max(now - last_log_time, 1e-3)
                 overall_secs = max(now - run_start, 1e-3)
-                if oldest_seen is not None:
-                    days_back = (now_utc - oldest_seen).total_seconds() / 86400
+                if newest_seen is not None:
+                    days_back = (now_utc - newest_seen).total_seconds() / 86400
                     coverage = (
-                        f"oldest IoC at {oldest_seen.isoformat(timespec='seconds')} "
-                        f"({days_back:.1f}/{days:.1f} days back)"
+                        f"reached IoCs from {newest_seen.isoformat(timespec='seconds')} "
+                        f"({days_back:.1f} days back, target 0.0)"
                     )
                 else:
                     coverage = "no IoCs yet"
@@ -144,6 +155,16 @@ def _fetch_raw(days, api_server, client_id, client_secret):
                 )
                 last_log_time = now
                 last_log_iocs = len(rows)
+            if upper_cutoff is not None and newest_seen is not None and newest_seen > upper_cutoff:
+                _log.info(
+                    "Ermes feed: reached upper cutoff %s (skip_recent_days=%.1f); "
+                    "stopping pagination after %d pages, %d IoCs",
+                    upper_cutoff.isoformat(timespec="seconds"),
+                    skip_recent_days,
+                    page_num,
+                    len(rows),
+                )
+                break
             if page_num >= _MAX_PAGES_SAFETY:
                 _log.warning(
                     "Ermes feed: hit MAX_PAGES_SAFETY=%d after %d IoCs; stopping. "
@@ -178,9 +199,9 @@ class Ermes:
         "ermes_client_secret",
     )
 
-    def fetch(self, days, settings: Settings):
+    def fetch(self, days, settings: Settings, skip_recent_days: float = 0.0):
         api_server, client_id, client_secret = settings.require(*self.requires_credentials)
-        raw = _fetch_raw(days, api_server, client_id, client_secret)
+        raw = _fetch_raw(days, api_server, client_id, client_secret, skip_recent_days)
         return canonicalize_feed(raw, self.short_name)
 
 

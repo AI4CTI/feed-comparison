@@ -197,3 +197,114 @@ def test_ermes_fetch_stops_at_max_pages_safety_with_warning(monkeypatch, caplog)
     assert any("MAX_PAGES_SAFETY=3" in rec.message for rec in caplog.records)
     # Partial result, not a crash, not an infinite loop.
     assert not df.empty
+
+
+def test_ermes_fetch_early_stops_when_skip_recent_days_passed(monkeypatch, caplog):
+    """When the caller asks to skip the last N days, the TAXII pagination
+    must short-circuit as soon as the newest IoC seen crosses the upper
+    cutoff — saving bandwidth on the most expensive feed. Correctness is
+    handled by the caller's post-fetch filter; this is purely an optimisation."""
+    pytest.importorskip("requests_oauth2client")
+    pytest.importorskip("taxii2client")
+
+    from datetime import datetime, timedelta, timezone
+
+    # 10 pages spaced 1 day apart, ascending (oldest first), the way the
+    # real TAXII server returns them. With skip_recent_days=5, pagination
+    # should break around page 5-6 — i.e. AS SOON AS newest_seen crosses
+    # (now - 5d), so the last few pages are never fetched.
+    now = datetime.now(tz=timezone.utc)
+    page_dates = [now - timedelta(days=d) for d in (10, 9, 8, 7, 6, 5, 4, 3, 2, 1)]
+
+    pages_yielded = {"count": 0}
+
+    def finite_pages(*_args, **_kwargs):
+        for i, d in enumerate(page_dates, start=1):
+            pages_yielded["count"] = i
+            yield {
+                "objects": [
+                    {
+                        "ermes_metadata": {
+                            "url": f"http://page{i}.example.com/",
+                            "discovered": d.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        }
+                    }
+                ]
+            }
+
+    class _FakeCollection:
+        def get_objects(self, *_a, **_k):
+            return None
+
+    class _FakeApiRoot:
+        def __init__(self, *_a, **_k):
+            self.collections = [_FakeCollection()]
+
+    monkeypatch.setattr("taxii2client.ApiRoot", _FakeApiRoot)
+    monkeypatch.setattr("taxii2client.v21.as_pages", finite_pages)
+
+    settings = Settings(
+        ermes_api_server="https://api.example.com",
+        ermes_client_id="id",
+        ermes_client_secret="secret",
+    )
+    with caplog.at_level("INFO", logger="feed_comparison.feeds.ermes"):
+        df = Ermes().fetch(days=30, settings=settings, skip_recent_days=5)
+
+    # Pagination must stop AS SOON AS newest_seen crosses (now - 5d).
+    # That happens around page 6 (date now-5d) or page 7 (date now-4d),
+    # depending on clock skew between test setup and check. Either way
+    # we must have skipped the tail (pages 8-10 = days now-3d, now-2d, now-1d).
+    assert pages_yielded["count"] < 10, (
+        f"Expected early-stop before page 10, but consumed all {pages_yielded['count']}"
+    )
+    assert not df.empty
+    assert any("reached upper cutoff" in rec.message for rec in caplog.records)
+
+
+def test_ermes_fetch_does_not_early_stop_when_skip_recent_days_zero(monkeypatch):
+    """Sanity check: with skip_recent_days=0 (the default), pagination
+    must consume every page returned by the server."""
+    pytest.importorskip("requests_oauth2client")
+    pytest.importorskip("taxii2client")
+
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(tz=timezone.utc)
+    page_dates = [now - timedelta(days=d) for d in (10, 8, 6, 4, 2, 0)]
+    pages_yielded = {"count": 0}
+
+    def finite_pages(*_args, **_kwargs):
+        for i, d in enumerate(page_dates, start=1):
+            pages_yielded["count"] = i
+            yield {
+                "objects": [
+                    {
+                        "ermes_metadata": {
+                            "url": f"http://page{i}.example.com/",
+                            "discovered": d.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        }
+                    }
+                ]
+            }
+
+    class _FakeCollection:
+        def get_objects(self, *_a, **_k):
+            return None
+
+    class _FakeApiRoot:
+        def __init__(self, *_a, **_k):
+            self.collections = [_FakeCollection()]
+
+    monkeypatch.setattr("taxii2client.ApiRoot", _FakeApiRoot)
+    monkeypatch.setattr("taxii2client.v21.as_pages", finite_pages)
+
+    settings = Settings(
+        ermes_api_server="https://api.example.com",
+        ermes_client_id="id",
+        ermes_client_secret="secret",
+    )
+    df = Ermes().fetch(days=30, settings=settings)
+    # All 6 pages consumed; no early-stop because skip_recent_days defaults to 0.
+    assert pages_yielded["count"] == 6
+    assert len(df) == 6

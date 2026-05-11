@@ -46,7 +46,7 @@ def download(
         feed = registry.get(name)
         _log.info("Downloading %s (%.1f days)...", name, days)
         try:
-            df = feed.fetch(days=days, settings=settings)
+            df = feed.fetch(days=days, settings=settings, skip_recent_days=last_days_to_ignore)
         except _PER_FEED_ERRORS as exc:
             _log.error("%s: %s", name, exc)
             continue
