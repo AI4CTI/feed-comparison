@@ -15,6 +15,12 @@ from feed_comparison.utils.normalize import canonicalize_feed
 _log = logging.getLogger(__name__)
 
 _PER_REQUEST = 50
+_PROGRESS_EVERY_N_PAGES = 10
+# Hard safety net: a buggy or hostile server that keeps returning pages
+# without ever advancing the cursor would otherwise loop forever. Set
+# very high so an honest server with a wide --days window is never cut
+# short. If this ever trips, the user sees a loud WARNING.
+_MAX_PAGES_SAFETY = 100_000
 
 
 def _parse_iso8601(value):
@@ -90,9 +96,25 @@ def _fetch_raw(days, api_server, client_id, client_secret):
             per_request=_PER_REQUEST,
             added_after=cutoff.isoformat(),
         )
-        for page in pages:
+        for page_num, page in enumerate(pages, start=1):
             metas = (obj.get("ermes_metadata", {}) for obj in page.get("objects", []))
             rows.extend(_iocs_to_rows(metas))
+            if page_num % _PROGRESS_EVERY_N_PAGES == 0:
+                _log.info(
+                    "Ermes feed: fetched %d pages, %d IoCs collected so far",
+                    page_num,
+                    len(rows),
+                )
+            if page_num >= _MAX_PAGES_SAFETY:
+                _log.warning(
+                    "Ermes feed: hit MAX_PAGES_SAFETY=%d after %d IoCs; stopping. "
+                    "The downloaded window is INCOMPLETE — likely a misbehaving "
+                    "upstream server. Try a smaller --days, or report the issue "
+                    "to the Ermes CTI Feed maintainers.",
+                    _MAX_PAGES_SAFETY,
+                    len(rows),
+                )
+                break
     except OAuth2Error as exc:
         raise FeedConfigurationError(
             f"Ermes OAuth authentication against {token_endpoint} failed: {exc}. "

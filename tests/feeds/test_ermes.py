@@ -142,3 +142,58 @@ def test_ermes_fetch_translates_oauth_errors_to_feed_configuration_error(monkeyp
     assert "ERMES_API_SERVER" in msg
     assert "ERMES_CLIENT_ID" in msg
     assert "ERMES_CLIENT_SECRET" in msg
+
+
+def test_ermes_fetch_stops_at_max_pages_safety_with_warning(monkeypatch, caplog):
+    """Regression: a misbehaving Ermes server that paginated forever used to
+    leave the client looping indefinitely. The safety cap must trip with a
+    clear WARNING that explicitly tells the user the download is partial."""
+    pytest.importorskip("requests_oauth2client")
+    pytest.importorskip("taxii2client")
+
+    monkeypatch.setattr("feed_comparison.feeds.ermes._MAX_PAGES_SAFETY", 3)
+
+    # Skip the real OAuth + ApiRoot setup by short-circuiting the bits of
+    # taxii2client that touch the network. We replace `as_pages` with our
+    # own infinite generator and stub `ApiRoot` so its `.collections[0]`
+    # access doesn't try to talk to a real TAXII server.
+    def infinite_pages(*_args, **_kwargs):
+        page_index = 0
+        while True:
+            page_index += 1
+            yield {
+                "objects": [
+                    {
+                        "ermes_metadata": {
+                            "url": f"http://e{page_index}.example.com/",
+                            "discovered": "2026-04-29T12:00:00Z",
+                        }
+                    }
+                ]
+            }
+
+    class _FakeCollection:
+        def get_objects(self, *_a, **_k):
+            return None
+
+    class _FakeApiRoot:
+        def __init__(self, *_a, **_k):
+            self.collections = [_FakeCollection()]
+
+    monkeypatch.setattr("feed_comparison.feeds.ermes.__name__", "feed_comparison.feeds.ermes")
+    monkeypatch.setattr("taxii2client.ApiRoot", _FakeApiRoot)
+    monkeypatch.setattr("taxii2client.v21.as_pages", infinite_pages)
+
+    # Also short-circuit OAuth so the test doesn't try to talk to a token
+    # endpoint. We just need OAuth2Client/OAuth2ClientCredentialsAuth to be
+    # constructible; ApiRoot is faked above so the `auth` is never used.
+    settings = Settings(
+        ermes_api_server="https://api.example.com",
+        ermes_client_id="id",
+        ermes_client_secret="secret",
+    )
+    with caplog.at_level("WARNING", logger="feed_comparison.feeds.ermes"):
+        df = Ermes().fetch(days=1, settings=settings)
+    assert any("MAX_PAGES_SAFETY=3" in rec.message for rec in caplog.records)
+    # Partial result, not a crash, not an infinite loop.
+    assert not df.empty

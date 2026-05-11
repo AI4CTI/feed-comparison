@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 
 import responses
@@ -43,3 +44,31 @@ def test_phishstats_returns_empty_on_5xx(monkeypatch):
     )
     df = PhishStats().fetch(days=1, settings=Settings())
     assert df.empty
+
+
+@responses.activate
+def test_phishstats_stops_at_max_pages_safety_with_warning(monkeypatch, caplog):
+    """Regression: a server that keeps returning future-dated entries (so
+    `oldest_in_page < cutoff` never triggers) used to loop forever. The
+    safety cap must trip with a clear WARNING and stop, returning a
+    partial DataFrame instead of looping until the user kills the process."""
+    monkeypatch.setattr("feed_comparison.feeds.phishstats._REQUEST_DELAY_S", 0)
+    monkeypatch.setattr("feed_comparison.feeds.phishstats._MAX_PAGES_SAFETY", 3)
+
+    now = datetime.utcnow()
+    recent = (now - timedelta(minutes=5)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Every page is non-empty AND newer than the cutoff, so the natural
+    # loop exit conditions never fire. Only the safety cap saves us.
+    payload = [{"url": f"http://x{i}.example.com/", "date": recent} for i in range(3)]
+    responses.add(
+        responses.GET,
+        re.compile(rf"{re.escape(_API_URL)}&_p=\d+"),
+        json=payload,
+        status=200,
+    )
+
+    with caplog.at_level("WARNING", logger="feed_comparison.feeds.phishstats"):
+        df = PhishStats().fetch(days=1, settings=Settings())
+    assert any("MAX_PAGES_SAFETY=3" in rec.message for rec in caplog.records)
+    # A non-empty (partial) result is returned, not a crash.
+    assert not df.empty

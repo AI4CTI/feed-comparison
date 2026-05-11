@@ -12,6 +12,12 @@ from feed_comparison.utils.normalize import canonicalize_feed
 
 _API_URL = "https://phishstats.info:2096/api/phishing?_sort=-date"
 _REQUEST_DELAY_S = 3
+_PROGRESS_EVERY_N_PAGES = 10
+# Hard safety net against a server that keeps returning pages without
+# advancing past the cutoff. Set very high so a legitimate, wide --days
+# request never gets cut short. If it ever trips, the user sees a loud
+# WARNING explaining the partial download.
+_MAX_PAGES_SAFETY = 100_000
 _log = logging.getLogger(__name__)
 
 
@@ -55,6 +61,22 @@ def _fetch_raw(days):
         if not page_rows or (oldest_in_page is not None and oldest_in_page < cutoff):
             break
         page += 1
+        if page % _PROGRESS_EVERY_N_PAGES == 0:
+            _log.info(
+                "PhishStats: fetched %d pages, %d IoCs collected so far",
+                page,
+                len(rows),
+            )
+        if page >= _MAX_PAGES_SAFETY:
+            _log.warning(
+                "PhishStats: hit MAX_PAGES_SAFETY=%d after %d IoCs; stopping. "
+                "The downloaded window is INCOMPLETE — likely a misbehaving "
+                "upstream server that does not advance past the cutoff. Try a "
+                "smaller --days, or report the issue to PhishStats.",
+                _MAX_PAGES_SAFETY,
+                len(rows),
+            )
+            break
 
     df = pd.DataFrame(rows)
     if df.empty:
