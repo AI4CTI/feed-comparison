@@ -44,9 +44,11 @@ def _query_page(page):
 
 
 def _fetch_raw(days):
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    now_utc = datetime.utcnow()
+    cutoff = now_utc - timedelta(days=days)
     rows = []
     page = 0
+    oldest_seen = None
     while True:
         payload = _query_page(page)
         if payload is None:
@@ -58,14 +60,27 @@ def _fetch_raw(days):
             page_rows.append({"url": entry["url"], "discovered_date": d})
             oldest_in_page = d if oldest_in_page is None else min(oldest_in_page, d)
         rows.extend(page_rows)
+        if oldest_in_page is not None:
+            oldest_seen = (
+                oldest_in_page if oldest_seen is None else min(oldest_seen, oldest_in_page)
+            )
         if not page_rows or (oldest_in_page is not None and oldest_in_page < cutoff):
             break
         page += 1
         if page % _PROGRESS_EVERY_N_PAGES == 0:
+            if oldest_seen is not None:
+                days_back = (now_utc - oldest_seen).total_seconds() / 86400
+                coverage = (
+                    f"oldest IoC at {oldest_seen.isoformat(timespec='seconds')} "
+                    f"({days_back:.1f}/{days:.1f} days back)"
+                )
+            else:
+                coverage = "no IoCs yet"
             _log.info(
-                "PhishStats: fetched %d pages, %d IoCs collected so far",
+                "PhishStats: %d pages, %d IoCs, %s",
                 page,
                 len(rows),
+                coverage,
             )
         if page >= _MAX_PAGES_SAFETY:
             _log.warning(

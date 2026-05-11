@@ -110,18 +110,35 @@ def _fetch_raw(days, api_server, client_id, client_secret):
         run_start = time.monotonic()
         last_log_time = run_start
         last_log_iocs = 0
+        # Track the oldest IoC discovered_date seen across all pages so
+        # the user can tell how far back into --days the run has reached.
+        oldest_seen = None
+        now_utc = datetime.utcnow()
         for page_num, page in enumerate(pages, start=1):
             metas = (obj.get("ermes_metadata", {}) for obj in page.get("objects", []))
-            rows.extend(_iocs_to_rows(metas))
+            new_rows = _iocs_to_rows(metas)
+            rows.extend(new_rows)
+            if new_rows:
+                page_oldest = min(r["discovered_date"] for r in new_rows)
+                oldest_seen = page_oldest if oldest_seen is None else min(oldest_seen, page_oldest)
             if page_num % _PROGRESS_EVERY_N_PAGES == 0:
                 now = time.monotonic()
                 interval_iocs = len(rows) - last_log_iocs
                 interval_secs = max(now - last_log_time, 1e-3)
                 overall_secs = max(now - run_start, 1e-3)
+                if oldest_seen is not None:
+                    days_back = (now_utc - oldest_seen).total_seconds() / 86400
+                    coverage = (
+                        f"oldest IoC at {oldest_seen.isoformat(timespec='seconds')} "
+                        f"({days_back:.1f}/{days:.1f} days back)"
+                    )
+                else:
+                    coverage = "no IoCs yet"
                 _log.info(
-                    "Ermes feed: %d pages, %d IoCs collected (%.0f IoCs/s now, %.0f IoCs/s avg)",
+                    "Ermes feed: %d pages, %d IoCs, %s (%.0f IoCs/s now, %.0f IoCs/s avg)",
                     page_num,
                     len(rows),
+                    coverage,
                     interval_iocs / interval_secs,
                     len(rows) / overall_secs,
                 )
