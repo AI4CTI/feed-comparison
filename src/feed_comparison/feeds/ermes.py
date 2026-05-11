@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
@@ -14,7 +15,13 @@ from feed_comparison.utils.normalize import canonicalize_feed
 
 _log = logging.getLogger(__name__)
 
-_PER_REQUEST = 50
+# Larger pages = fewer round-trips, which matters because the upstream
+# TAXII server appears to do offset-based pagination scans: per-page
+# latency grows roughly linearly with the page index, so each request
+# we save also saves a chunk of server CPU at the tail of the run. The
+# value is a hint — a server that enforces a smaller cap will simply
+# return its own default, no error.
+_PER_REQUEST = 200
 _PROGRESS_EVERY_N_PAGES = 10
 # Hard safety net: a buggy or hostile server that keeps returning pages
 # without ever advancing the cursor would otherwise loop forever. Set
@@ -96,15 +103,30 @@ def _fetch_raw(days, api_server, client_id, client_secret):
             per_request=_PER_REQUEST,
             added_after=cutoff.isoformat(),
         )
+        # Track per-interval rate so the user can spot a slowdown without
+        # having to do mental math on the timestamps. The upstream server
+        # tends to slow down on later pages (likely offset-based scan),
+        # so a falling rate is the canonical signal of "tail latency hit".
+        run_start = time.monotonic()
+        last_log_time = run_start
+        last_log_iocs = 0
         for page_num, page in enumerate(pages, start=1):
             metas = (obj.get("ermes_metadata", {}) for obj in page.get("objects", []))
             rows.extend(_iocs_to_rows(metas))
             if page_num % _PROGRESS_EVERY_N_PAGES == 0:
+                now = time.monotonic()
+                interval_iocs = len(rows) - last_log_iocs
+                interval_secs = max(now - last_log_time, 1e-3)
+                overall_secs = max(now - run_start, 1e-3)
                 _log.info(
-                    "Ermes feed: fetched %d pages, %d IoCs collected so far",
+                    "Ermes feed: %d pages, %d IoCs collected (%.0f IoCs/s now, %.0f IoCs/s avg)",
                     page_num,
                     len(rows),
+                    interval_iocs / interval_secs,
+                    len(rows) / overall_secs,
                 )
+                last_log_time = now
+                last_log_iocs = len(rows)
             if page_num >= _MAX_PAGES_SAFETY:
                 _log.warning(
                     "Ermes feed: hit MAX_PAGES_SAFETY=%d after %d IoCs; stopping. "
