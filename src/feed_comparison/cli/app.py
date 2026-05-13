@@ -3,6 +3,7 @@ import typer
 import feed_comparison.feeds  # noqa: F401  -- import side-effect: populates the registry
 from feed_comparison import __version__
 from feed_comparison.cli._logging import configure_logging
+from feed_comparison.cli.banner import print_banner
 from feed_comparison.cli.compare import compare
 from feed_comparison.cli.download import download
 from feed_comparison.cli.list_feeds import list_feeds
@@ -26,6 +27,12 @@ app = typer.Typer(
 @app.callback()
 def _root(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging."),
+    no_banner: bool = typer.Option(
+        False,
+        "--no-banner",
+        help="Suppress the ASCII banner.",
+        envvar="FEED_COMPARISON_NO_BANNER",
+    ),
     version: bool = typer.Option(
         False,
         "--version",
@@ -35,6 +42,7 @@ def _root(
     ),
 ):
     """feed-comparison root command — see subcommands below."""
+    print_banner(suppress=no_banner)
     configure_logging(verbose)
 
 

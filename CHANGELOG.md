@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- ASCII banner shown on stderr at the top of every CLI invocation (suppressed when stderr isn't a TTY, when `--no-banner` is passed, or when `FEED_COMPARISON_NO_BANNER` is set in the environment). Stays out of stdout so machine-readable subcommands like `list-feeds --json` keep parsing cleanly.
+
 ## [0.2.0] — 2026-05-13
 
 ### Added
