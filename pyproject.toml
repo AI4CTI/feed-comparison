@@ -71,7 +71,7 @@ dev = [
 ]
 
 [project.scripts]
-feed-comparison = "feed_comparison.cli.app:app"
+feed-comparison = "feed_comparison.cli.app:main"
 
 [project.urls]
 Homepage = "https://github.com/AI4CTI/feed-comparison"
