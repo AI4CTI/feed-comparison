@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Added
 - ASCII banner shown on stderr at the top of every CLI invocation (suppressed when stderr isn't a TTY, when `--no-banner` is passed, or when `FEED_COMPARISON_NO_BANNER` is set in the environment). Stays out of stdout so machine-readable subcommands like `list-feeds --json` keep parsing cleanly.
 - New `feed-comparison about` subcommand that prints project metadata, repository URLs, license, maintainer, authors, affiliations (Ermes Browser Security · Politecnico di Torino), funding statement (Italian Ministry of Education Grant FISA-2023-00168) and citation hint.
+- New `utils/plot_style.py` module with `apply_style()` and the colour-blind safe `WONG_PALETTE`. Both `plot_supervenn` and `plot_timeplot` now share typography, axes treatment, grid look, palette, and DPI — so the two plot families belong to the same visual identity.
+
+### Changed
+- Time-delta CDF: switched from saturated primaries (r/b/g) to the Wong palette; line markers removed (linestyle alone is enough to disambiguate traces); legend now reports both median and mean per pair; a dashed vertical reference line at delta=0 highlights "benchmark earlier vs later" at a glance; xlabel now spells out the sign convention.
+- SuperVenn: applies the shared style, uses the Wong palette for set colours, and adds an explicit suptitle ("Overlap on \<metric\> — \<n\> feeds, \<days\>-day window").
 
 ## [0.2.0] — 2026-05-13
 
