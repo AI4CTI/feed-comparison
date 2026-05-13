@@ -70,9 +70,16 @@ feed-comparison download phishstats --days 1 --output-dir ./output
 # 3. Compare two feeds: SuperVenn + time-delta CDF in ./output.
 feed-comparison compare phishstats phishtank --days 1 --benchmark phishstats
 
-# 4. Re-render plots from previously saved CSVs without re-downloading.
+# 4. Same comparison but on a 30-day window, dropping the most recent
+#    10 days as a "settling" buffer (lets feeds with slower submission
+#    pipelines catch up before measuring overlap).
+feed-comparison compare phishstats phishtank --days 30 --ignore-last-days 10
+
+# 5. Re-render plots from previously saved CSVs without re-downloading.
 feed-comparison plot supervenn ./output/dataframe_*.csv --metric domain
 ```
+
+The time-delta CDF measures per-URL deltas between two feeds *only on the URLs they observed in common* (intersection on the fully-canonicalised URL, not on hostname or domain). Two feeds that publish the same domain under different paths therefore won't intersect — keep this in mind when interpreting an unexpectedly small intersection size in the legend.
 
 ## Configuration
 
