@@ -21,7 +21,7 @@ _TAGLINE = "A reproducible CLI to compare and benchmark malicious-URL threat int
 _LICENSE = "AGPL-3.0-or-later"
 _MAINTAINER = "Stefano Traverso"
 _AUTHORS = "Ermes Cyber Security S.p.A. · AI4CTI contributors"
-_AFFILIATIONS = "Ermes Browser Security · Politecnico di Torino"
+_AFFILIATIONS = "Ermes Cyber Security · Politecnico di Torino"
 _FUNDING = (
     "Italian Ministry of Education, Grant FISA-2023-00168\n"
     "(AI4CTI: AI for Cyber Threat Intelligence)"
