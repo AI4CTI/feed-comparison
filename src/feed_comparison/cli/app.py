@@ -66,8 +66,7 @@ def main():
     suppress = (
         "--no-banner" in args
         or "--version" in args  # scripts that parse `--version` shouldn't see decoration
-        or os.environ.get("FEED_COMPARISON_NO_BANNER", "").lower()
-        in _BANNER_SUPPRESS_ENV_TRUTHY
+        or os.environ.get("FEED_COMPARISON_NO_BANNER", "").lower() in _BANNER_SUPPRESS_ENV_TRUTHY
     )
     print_banner(suppress=suppress)
     # Strip --no-banner from argv so subcommands don't fail on an unknown flag.
