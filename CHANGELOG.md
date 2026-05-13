@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 - ASCII banner shown on stderr at the top of every CLI invocation (suppressed when stderr isn't a TTY, when `--no-banner` is passed, or when `FEED_COMPARISON_NO_BANNER` is set in the environment). Stays out of stdout so machine-readable subcommands like `list-feeds --json` keep parsing cleanly.
+- New `feed-comparison about` subcommand that prints project metadata, repository URLs, license, maintainer, authors, affiliations (Ermes Browser Security · Politecnico di Torino), funding statement (Italian Ministry of Education Grant FISA-2023-00168) and citation hint.
 
 ## [0.2.0] — 2026-05-13
 

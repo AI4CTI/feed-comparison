@@ -6,6 +6,7 @@ import typer
 import feed_comparison.feeds  # noqa: F401  -- import side-effect: populates the registry
 from feed_comparison import __version__
 from feed_comparison.cli._logging import configure_logging
+from feed_comparison.cli.about import about_command
 from feed_comparison.cli.banner import print_banner
 from feed_comparison.cli.compare import compare
 from feed_comparison.cli.download import download
@@ -77,6 +78,7 @@ def main():
 app.command("list-feeds")(list_feeds)
 app.command("download")(download)
 app.command("compare")(compare)
+app.command("about")(about_command)
 app.add_typer(plot_app, name="plot")
 
 
