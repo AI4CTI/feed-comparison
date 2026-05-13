@@ -21,7 +21,7 @@ _BANNER = (
     "╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝"
     "\033[0m\n"  # reset
     "\033[2m"  # dim
-    "         feed-comparison · benchmark phishing feeds"
+    "         feed-comparison · benchmark malicious-URL feeds"
     "\033[0m\n"  # reset
 )
 

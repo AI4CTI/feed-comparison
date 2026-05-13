@@ -26,7 +26,7 @@ def test_banner_writes_to_stderr_when_tty(capsys):
     captured = capsys.readouterr()
     assert captured.out == "", "Banner must never write to stdout"
     assert "feed-comparison" in captured.err
-    assert "phishing feeds" in captured.err
+    assert "malicious-URL feeds" in captured.err
 
 
 def test_banner_suppressed_by_flag_even_on_tty(capsys):
@@ -70,7 +70,7 @@ def test_main_prints_banner_on_bare_invocation(capsys, monkeypatch):
         main()
     captured = capsys.readouterr()
     assert "feed-comparison" in captured.err
-    assert "phishing feeds" in captured.err
+    assert "malicious-URL feeds" in captured.err
 
 
 def test_main_suppresses_banner_for_version_flag(capsys, monkeypatch):
