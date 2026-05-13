@@ -6,8 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-13
+
 ### Added
 - New `ermes` feed integration over STIX/TAXII with OAuth 2.0 Client Credentials, opt-in via the new `[ermes]` extra (depends on `taxii2-client` and `requests-oauth2client`). Requires `ERMES_API_SERVER`, `ERMES_CLIENT_ID`, `ERMES_CLIENT_SECRET`. Surfaced in `feed-comparison list-feeds` for everyone, gated by credentials at fetch time (clean `MissingCredentialsError` for users without access).
+- Pagination progress logs (per-page IoC counts, per-interval rate, advancing-timeline indicator) for `ermes` and `phishstats` feeds.
+- `MAX_PAGES_SAFETY` hard cap on both `ermes` (TAXII) and `phishstats` paginated downloads — protects against runaway pagination from a misbehaving server; emits a clear WARNING when tripped.
+- Optional `skip_recent_days` hint on the `Feed` Protocol; the `ermes` implementation uses it to early-stop TAXII pagination once `newest_seen > now − N days`. The other feeds accept it for protocol compliance and ignore it (their endpoints don't paginate in a way that benefits). The CLI threads `--ignore-last-days` to this hint automatically.
+- Test suite grown to 141 tests (was 105 at v0.1.0). Coverage steady at ~75% overall, 92% on the canonicalisation modules.
+
+### Changed
+- Pagination progress log for `ermes`: replaced the misleading "oldest IoC" indicator (which locks to the cutoff for ASC-sorted feeds and never moves) with "newest IoC reached" (decreases monotonically toward 0 days back), giving the user a real progress signal.
+- Larger TAXII page size (50 → 200) to reduce round-trips on the slow upstream server.
+
+### Fixed
+- Time-delta CDF: normalise tz-aware vs tz-naive timestamps before subtraction. Previously the Ermes feed's offset-aware timestamps mixed with the naive-UTC timestamps from the other feeds caused a `TypeError` mid-pipeline.
+- Time-delta CDF: replace the deprecated pandas-1.x `astype("timedelta64[h]")` cast with `.dt.total_seconds() / 86400` for pandas 2.x compatibility.
+- `compare` and `download` CLI: catch ALL per-feed exceptions (not just the typed ones) so an unexpected failure in one feed doesn't abort the entire run. The full traceback is still available with `--verbose`.
+- Ermes feed: surface OAuth authentication failures as a typed `FeedConfigurationError` with an actionable message naming the env vars to verify, instead of a raw OAuth2 traceback.
+
+### Security
+- New `bounded_get` HTTP wrapper: caps response size to 256 MiB (configurable per call) and streams the body. Raises `ResponseTooLargeError` on cap breach, preventing memory exhaustion from a compromised or misbehaving upstream. Used by `phishstats`, `phishtank` and `urlscan`.
+- Logging hardening: pin `urllib3`, `requests`, `requests_oauth2client`, `taxii2client` and `pymisp` loggers to INFO even with `--verbose`, to prevent leakage of `Authorization: Bearer …` and other credentials in the debug output.
+- `Settings.__repr__` overridden to mask credential fields (`client_secret`, `misp_key`, `urlscan_token`, …) — prevents accidental leakage when the Settings object is printed/logged during debugging.
 
 ## [0.1.0] — 2026-05-06
 
