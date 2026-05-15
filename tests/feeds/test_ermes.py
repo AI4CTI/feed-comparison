@@ -28,7 +28,7 @@ def test_parse_iso8601_handles_explicit_offset():
 
 
 def test_iocs_to_rows_maps_full_payload():
-    rows = _iocs_to_rows(
+    rows, n_skipped = _iocs_to_rows(
         [
             {
                 "url": "http://evil.example.com/login",
@@ -39,6 +39,7 @@ def test_iocs_to_rows_maps_full_payload():
             }
         ]
     )
+    assert n_skipped == 0
     assert len(rows) == 1
     row = rows[0]
     assert row["url"] == "http://evil.example.com/login"
@@ -48,21 +49,23 @@ def test_iocs_to_rows_maps_full_payload():
 
 
 def test_iocs_to_rows_drops_entries_without_url_or_discovered():
-    rows = _iocs_to_rows(
+    rows, n_skipped = _iocs_to_rows(
         [
             {"url": "", "discovered": "2026-04-29T12:00:00Z"},
             {"url": "http://x.example.com/", "discovered": ""},
             {"url": "http://valid.example.com/", "discovered": "2026-04-29T12:00:00Z"},
         ]
     )
+    assert n_skipped == 0
     assert len(rows) == 1
     assert rows[0]["url"] == "http://valid.example.com/"
 
 
 def test_iocs_to_rows_tolerates_missing_optional_fields():
-    rows = _iocs_to_rows(
+    rows, n_skipped = _iocs_to_rows(
         [{"url": "http://minimal.example.com/", "discovered": "2026-04-29T12:00:00Z"}]
     )
+    assert n_skipped == 0
     assert len(rows) == 1
     assert rows[0]["confidence"] is None
     assert rows[0]["threat_type"] is None
@@ -70,7 +73,51 @@ def test_iocs_to_rows_tolerates_missing_optional_fields():
 
 
 def test_iocs_to_rows_with_empty_iter_returns_empty_list():
-    assert _iocs_to_rows(iter([])) == []
+    assert _iocs_to_rows(iter([])) == ([], 0)
+
+
+def test_iocs_to_rows_skips_entries_with_undocumented_metadata_fields():
+    """Defensive schema check: an IoC whose metadata carries a field
+    outside the documented public TAXII schema is skipped, and counted
+    against `n_skipped` so the caller can surface the count in DEBUG logs."""
+    rows, n_skipped = _iocs_to_rows(
+        [
+            {
+                "url": "http://standard.example.com/",
+                "discovered": "2026-04-29T12:00:00Z",
+                "confidence": 0.5,
+            },
+            {
+                "url": "http://has-extra-field.example.com/",
+                "discovered": "2026-04-29T12:00:00Z",
+                "confidence": 0.5,
+                "some_undocumented_field": "anything",
+            },
+        ]
+    )
+    assert len(rows) == 1
+    assert rows[0]["url"] == "http://standard.example.com/"
+    assert n_skipped == 1
+
+
+def test_iocs_to_rows_accepts_all_documented_fields_together():
+    """Sanity: an IoC populating every documented field at once is kept."""
+    rows, n_skipped = _iocs_to_rows(
+        [
+            {
+                "url": "http://full.example.com/",
+                "discovered": "2026-04-29T12:00:00Z",
+                "confidence": 0.9,
+                "threat_types": ["phishing"],
+                "ip_addresses": ["1.2.3.4"],
+                "screenshot_url": "https://shot.example.com/x.png",
+                "langs_detected": {"en": 0.99},
+                "target": "Acme",
+            }
+        ]
+    )
+    assert n_skipped == 0
+    assert len(rows) == 1
 
 
 def test_ermes_fetch_raises_when_credentials_missing():

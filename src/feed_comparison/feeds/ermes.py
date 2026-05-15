@@ -46,10 +46,45 @@ def _parse_iso8601(value):
     return parsed
 
 
+# Public TAXII feed schema: the set of `ermes_metadata` keys we know
+# how to interpret. Defensive parsing — IoCs whose metadata carries
+# fields outside this set are dropped, so a transitional or experimental
+# schema change upstream doesn't silently change the meaning of our
+# downloaded sample. New fields go through an explicit code update here.
+_DOCUMENTED_METADATA_FIELDS = frozenset(
+    {
+        "url",
+        "discovered",
+        "confidence",
+        "threat_types",
+        "ip_addresses",
+        "screenshot_url",
+        "langs_detected",
+        "target",
+    }
+)
+
+
+def _is_well_formed(meta):
+    """Strict schema check: the IoC's metadata must contain only fields
+    documented in the public TAXII feed specification. Extras are treated
+    as transitional/experimental and skipped to keep comparison runs
+    reproducible across upstream schema changes."""
+    return set(meta.keys()).issubset(_DOCUMENTED_METADATA_FIELDS)
+
+
 def _iocs_to_rows(meta_iter):
-    """Map an iterable of `ermes_metadata` dicts to DataFrame-ready rows."""
+    """Map an iterable of `ermes_metadata` dicts to DataFrame-ready rows.
+
+    Returns a tuple ``(rows, n_skipped)`` where ``n_skipped`` counts the
+    IoCs dropped because their metadata didn't match the documented schema.
+    """
     rows = []
+    n_skipped = 0
     for meta in meta_iter:
+        if not _is_well_formed(meta):
+            n_skipped += 1
+            continue
         url = meta.get("url")
         if not url:
             continue
@@ -66,7 +101,7 @@ def _iocs_to_rows(meta_iter):
                 "target": meta.get("target"),
             }
         )
-    return rows
+    return rows, n_skipped
 
 
 def _fetch_raw(days, api_server, client_id, client_secret, skip_recent_days=0.0):
@@ -124,11 +159,13 @@ def _fetch_raw(days, api_server, client_id, client_secret, skip_recent_days=0.0)
         # earlier "oldest" metric was misleading: it locked to the first
         # page's value and never updated, so every log line looked stuck.
         newest_seen = None
+        n_skipped_total = 0
         now_utc = datetime.utcnow()
         for page_num, page in enumerate(pages, start=1):
             metas = (obj.get("ermes_metadata", {}) for obj in page.get("objects", []))
-            new_rows = _iocs_to_rows(metas)
+            new_rows, n_skipped = _iocs_to_rows(metas)
             rows.extend(new_rows)
+            n_skipped_total += n_skipped
             if new_rows:
                 page_newest = max(r["discovered_date"] for r in new_rows)
                 newest_seen = page_newest if newest_seen is None else max(newest_seen, page_newest)
@@ -184,6 +221,12 @@ def _fetch_raw(days, api_server, client_id, client_secret, skip_recent_days=0.0)
         if exc.response is None or exc.response.status_code != HTTPStatus.NOT_FOUND:
             raise
         _log.debug("Ermes feed: server returned 404 (no more pages), stopping")
+
+    if n_skipped_total:
+        _log.debug(
+            "Ermes feed: skipped %d IoCs with non-documented metadata fields",
+            n_skipped_total,
+        )
 
     return pd.DataFrame(rows)
 
